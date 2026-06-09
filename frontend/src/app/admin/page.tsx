@@ -17,11 +17,11 @@ import {
 import Link from 'next/link';
 
 export default function DashboardOverview() {
-  const [games, setGames] = useState([]);
-  const [packages, setPackages] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [walletLogs, setWalletLogs] = useState([]);
-  const [customers, setCustomers] = useState([]);
+  const [games, setGames] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [walletLogs, setWalletLogs] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

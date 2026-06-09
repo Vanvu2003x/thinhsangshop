@@ -38,6 +38,19 @@ type ApiGamePackage = {
 
 type AccountInfoPayload = Record<string, unknown>;
 
+const pickArray = (data: unknown, keys: string[] = ["data"]): any[] => {
+  if (Array.isArray(data)) return data as any[];
+  if (data && typeof data === "object") {
+    for (const key of keys) {
+      const candidate = (data as Record<string, unknown>)[key];
+      if (Array.isArray(candidate)) {
+        return candidate as any[];
+      }
+    }
+  }
+  return [];
+};
+
 const fetchJson = async (input: string, init: RequestInit = {}) => {
   const token = isBrowser ? getCookie("clientToken") : null;
   const response = await fetch(input, {
@@ -52,7 +65,9 @@ const fetchJson = async (input: string, init: RequestInit = {}) => {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || "YÃªu cáº§u tháº¥t báº¡i");
+    const error = new Error(errData.message || "YÃªu cáº§u tháº¥t báº¡i");
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;
@@ -127,14 +142,14 @@ export const clientApi = {
     const res = await fetch(`${API_URL}/games`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.data || data;
+    return pickArray(data);
   },
 
   getPackagesByGameId: async (gameId: string) => {
     const res = await fetch(`${API_URL}/toup-package?game_id=${gameId}`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data || data).filter((p: ApiGamePackage) => p.game_id === gameId);
+    return pickArray(data).filter((p: ApiGamePackage) => p.game_id === gameId);
   },
 
   createOrder: async (packageId: string, quantity: number, accountInfo: AccountInfoPayload) => {
@@ -155,11 +170,24 @@ export const clientApi = {
   },
 
   getOrdersHistory: async () => {
-    const data = await fetchJson(`${API_URL}/order/history`, {
-      method: "GET",
-      headers: {},
-    });
-    return data?.orders || data || [];
+    const endpoints = [`${API_URL}/order/history`, `${API_URL}/order/my-orders`, `${API_URL}/order/user`];
+
+    for (const endpoint of endpoints) {
+      try {
+        const data = await fetchJson(endpoint, {
+          method: "GET",
+          headers: {},
+        });
+        return pickArray(data, ["orders", "data"]);
+      } catch (error) {
+        const status = typeof error === "object" && error && "status" in error ? (error as { status?: number }).status : undefined;
+        if (status !== 404) {
+          throw error;
+        }
+      }
+    }
+
+    return [];
   },
 
   submitWalletLog: async (amount: number, type: string, description: string) => {
@@ -174,7 +202,7 @@ export const clientApi = {
       method: "GET",
       headers: {},
     });
-    return data?.data || data || [];
+    return pickArray(data);
   },
 
   getAllAcc: async (game_id: string, keyword?: string, min?: number, max?: number, page = 1, limit = 10) => {
@@ -202,6 +230,6 @@ export const clientApi = {
       method: "GET",
       headers: {},
     });
-    return data?.data || data || [];
+    return pickArray(data);
   },
 };

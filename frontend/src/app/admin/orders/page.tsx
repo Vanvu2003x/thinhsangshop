@@ -35,21 +35,6 @@ export default function OrderManagement() {
     if (confirm(confirmMsg)) {
       const res = await adminApi.updateOrderStatus(id, status);
       if (res.success) {
-        // If cancelled, trigger simulated balance refund for the user
-        if (status === 'cancelled') {
-          const order = orders.find(o => o.id === id);
-          if (order) {
-            const customers = await adminApi.getCustomers();
-            const customer = customers.find((c: any) => c.email === order.user_email);
-            if (customer) {
-              await adminApi.updateCustomer({
-                ...customer,
-                balance: Number(customer.balance) + Number(order.amount)
-              });
-            }
-          }
-        }
-        
         loadOrders();
         if (selectedOrder && selectedOrder.id === id) {
           setSelectedOrder(null);

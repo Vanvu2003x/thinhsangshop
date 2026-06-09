@@ -75,11 +75,7 @@ function ProfileContent() {
         if (!user) return;
         
         const logsRes = await clientApi.getWalletLogs();
-        if (logsRes && logsRes.data) {
-          setWalletLogs(logsRes.data);
-        } else if (Array.isArray(logsRes)) {
-          setWalletLogs(logsRes);
-        }
+        setWalletLogs(Array.isArray(logsRes) ? logsRes : []);
       } catch (err) {
         console.error("Failed to load logs:", err);
       } finally {

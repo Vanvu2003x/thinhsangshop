@@ -41,6 +41,19 @@ type AdminCustomer = {
 };
 type AccountInfoPayload = Record<string, unknown>;
 
+const pickArray = (data: unknown, keys: string[] = ["data"]): any[] => {
+  if (Array.isArray(data)) return data as any[];
+  if (data && typeof data === "object") {
+    for (const key of keys) {
+      const candidate = (data as Record<string, unknown>)[key];
+      if (Array.isArray(candidate)) {
+        return candidate as any[];
+      }
+    }
+  }
+  return [];
+};
+
 const fetchJson = async (input: string, init: RequestInit = {}) => {
   const token = isBrowser ? (getCookie("adminToken") || getCookie("clientToken")) : null;
   const response = await fetch(input, {
@@ -119,7 +132,7 @@ export const adminApi = {
     const res = await fetch(`${API_URL}/games`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.data || data;
+    return pickArray(data);
   },
 
   saveGame: async (game: AdminWritableEntity) => {
@@ -142,7 +155,7 @@ export const adminApi = {
     const res = await fetch(`${API_URL}/toup-package`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.data || data;
+    return pickArray(data);
   },
 
   savePackage: async (pkg: AdminWritableEntity) => {
@@ -166,7 +179,7 @@ export const adminApi = {
       method: "GET",
       headers: {},
     });
-    return data?.orders || data || [];
+    return pickArray(data, ["orders", "data"]);
   },
 
   updateOrderStatus: async (id: number, status: string) => {
@@ -195,7 +208,7 @@ export const adminApi = {
       method: "GET",
       headers: {},
     });
-    return data?.data || data || [];
+    return pickArray(data);
   },
 
   approveWalletLog: async (id: string, approve: boolean) => {
@@ -210,7 +223,7 @@ export const adminApi = {
       method: "GET",
       headers: {},
     });
-    return data?.data || [];
+    return pickArray(data, ["data", "users"]);
   },
 
   updateCustomer: async (customer: AdminCustomer) => {
@@ -284,7 +297,7 @@ export const adminApi = {
       method: "GET",
       headers: {},
     });
-    return data?.data || data || [];
+    return pickArray(data);
   },
 
   sendAccountInfo: async (orderId: string, accInfo: AccountInfoPayload) => {

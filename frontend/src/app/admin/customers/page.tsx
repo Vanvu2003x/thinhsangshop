@@ -24,9 +24,10 @@ export default function CustomerManagement() {
     setLoading(true);
     try {
       const list = await adminApi.getCustomers();
-      setCustomers(list);
+      setCustomers(Array.isArray(list) ? list : []);
     } catch (e) {
       console.error(e);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }
@@ -91,8 +92,8 @@ export default function CustomerManagement() {
   };
 
   const filteredCustomers = customers.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.email.toLowerCase().includes(search.toLowerCase())
+    String(c?.name || "").toLowerCase().includes(search.toLowerCase()) || 
+    String(c?.email || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
