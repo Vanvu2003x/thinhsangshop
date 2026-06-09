@@ -26,6 +26,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState("");
+  const [logoSrc, setLogoSrc] = useState("/logo-main.png");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,16 +84,28 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-[#2d3a54] bg-[#374669] shadow-lg">
       <div className="mx-auto flex min-h-16 max-w-[1400px] items-center justify-between gap-4 px-4 sm:min-h-20 sm:px-6">
         <Link href="/" className="group flex items-center">
-          <div className="relative flex h-11 items-center justify-center sm:h-16">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-main.png"
-              alt="Shop Thịnh Sáng"
-              className="relative z-10 h-full w-auto object-contain transition duration-300 group-hover:scale-105"
-              onError={(event) => {
-                event.currentTarget.style.display = "none";
-              }}
-            />
+          <div className="relative flex items-center gap-3">
+            <div className="relative flex h-11 items-center justify-center sm:h-16">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoSrc}
+                alt="Thịnh Sáng Shop"
+                className="relative z-10 h-full w-auto object-contain transition duration-300 group-hover:scale-105"
+                onError={() => {
+                  if (logoSrc !== "/logo.jpg") {
+                    setLogoSrc("/logo.jpg");
+                  }
+                }}
+              />
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-sm font-black uppercase tracking-[0.22em] text-white">
+                Thịnh Sáng Shop
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-300/90">
+                Topup game 24/7
+              </div>
+            </div>
           </div>
         </Link>
 
@@ -156,27 +169,46 @@ export default function Header() {
                       </div>
                     </div>
 
-                    <Link href="/profile" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white">
+                    <Link
+                      href="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                    >
                       <User className="h-4 w-4 text-cyan-400" />
                       Thông tin cá nhân
                     </Link>
-                    <Link href="/history" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white">
+                    <Link
+                      href="/history"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                    >
                       <History className="h-4 w-4 text-cyan-400" />
                       Lịch sử giao dịch
                     </Link>
-                    <Link href="/account/don-hang" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white">
+                    <Link
+                      href="/account/don-hang"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                    >
                       <Gamepad2 className="h-4 w-4 text-cyan-400" />
-                      Lịch sử mua Acc
+                      Lịch sử mua acc
                     </Link>
 
                     {userProfile.role === "admin" && (
-                      <Link href="/admin" onClick={() => setDropdownOpen(false)} className="mt-1 flex items-center gap-2.5 border-t border-white/5 px-4 py-2.5 pt-2 text-xs text-amber-400 transition hover:bg-white/5 hover:text-white">
+                      <Link
+                        href="/admin"
+                        onClick={() => setDropdownOpen(false)}
+                        className="mt-1 flex items-center gap-2.5 border-t border-white/5 px-4 py-2.5 pt-2 text-xs text-amber-400 transition hover:bg-white/5 hover:text-white"
+                      >
                         <Sparkles className="h-4 w-4 text-amber-400" />
                         Quản trị hệ thống
                       </Link>
                     )}
 
-                    <button onClick={handleLogout} className="mt-1.5 flex w-full items-center gap-2.5 border-t border-white/5 px-4 py-2.5 pt-2 text-left text-xs text-rose-400 transition hover:bg-rose-500/10 hover:text-white">
+                    <button
+                      onClick={handleLogout}
+                      className="mt-1.5 flex w-full items-center gap-2.5 border-t border-white/5 px-4 py-2.5 pt-2 text-left text-xs text-rose-400 transition hover:bg-rose-500/10 hover:text-white"
+                    >
                       <LogOut className="h-4 w-4" />
                       Đăng xuất tài khoản
                     </button>
@@ -186,11 +218,17 @@ export default function Header() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Link href="/login" className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#172237]/40 px-5 py-2.5 text-xs font-extrabold text-zinc-300 transition duration-300 hover:border-white/20 hover:bg-[#1f2e4a]/60 hover:text-white">
+              <Link
+                href="/login"
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#172237]/40 px-5 py-2.5 text-xs font-extrabold text-zinc-300 transition duration-300 hover:border-white/20 hover:bg-[#1f2e4a]/60 hover:text-white"
+              >
                 <User className="h-4 w-4 text-cyan-400" />
                 <span>Đăng nhập</span>
               </Link>
-              <Link href="/register" className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-blue-500/20 transition duration-300 hover:scale-[1.02] hover:from-blue-500 hover:to-cyan-400 active:scale-[0.98]">
+              <Link
+                href="/register"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-blue-500/20 transition duration-300 hover:scale-[1.02] hover:from-blue-500 hover:to-cyan-400 active:scale-[0.98]"
+              >
                 <Wallet className="h-4 w-4 text-white" />
                 <span>Đăng ký</span>
               </Link>
@@ -200,7 +238,10 @@ export default function Header() {
 
         <div className="flex items-center gap-4 xl:hidden">
           {userProfile && (
-            <Link href="/profile" className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#172237] px-3 py-1.5 text-[10px] font-bold text-zinc-200">
+            <Link
+              href="/profile"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#172237] px-3 py-1.5 text-[10px] font-bold text-zinc-200"
+            >
               <Wallet className="h-3 w-3 text-cyan-400" />
               <span>{Number(userProfile.balance || 0).toLocaleString("vi-VN")}đ</span>
             </Link>
@@ -251,37 +292,64 @@ export default function Header() {
                   </div>
                 </div>
 
-                <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white">
+                <Link
+                  href="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                >
                   <User className="h-4.5 w-4.5 text-cyan-400" />
                   Thông tin cá nhân
                 </Link>
-                <Link href="/history" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white">
+                <Link
+                  href="/history"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                >
                   <History className="h-4.5 w-4.5 text-cyan-400" />
                   Lịch sử giao dịch
                 </Link>
-                <Link href="/account/don-hang" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white">
+                <Link
+                  href="/account/don-hang"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-zinc-300 transition hover:bg-white/5 hover:text-white"
+                >
                   <Gamepad2 className="h-4.5 w-4.5 text-cyan-400" />
-                  Lịch sử mua Acc
+                  Lịch sử mua acc
                 </Link>
 
                 {userProfile.role === "admin" && (
-                  <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-amber-400 transition hover:bg-white/5 hover:text-white">
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-amber-400 transition hover:bg-white/5 hover:text-white"
+                  >
                     <Sparkles className="h-4.5 w-4.5 text-amber-400" />
                     Quản trị hệ thống
                   </Link>
                 )}
 
-                <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs text-rose-400 transition hover:bg-rose-500/10">
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs text-rose-400 transition hover:bg-rose-500/10"
+                >
                   <LogOut className="h-4.5 w-4.5" />
                   Đăng xuất
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 px-3">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center rounded-xl border border-white/10 py-2.5 text-xs font-bold text-zinc-300">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-center rounded-xl border border-white/10 py-2.5 text-xs font-bold text-zinc-300"
+                >
                   Đăng nhập
                 </Link>
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-2.5 text-xs font-bold text-white">
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-2.5 text-xs font-bold text-white"
+                >
                   Đăng ký
                 </Link>
               </div>

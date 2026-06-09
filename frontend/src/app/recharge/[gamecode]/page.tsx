@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { clientApi } from '../../clientApi';
+import { resolvePackageThumbnail } from '../../packageArt';
 import { 
   Gamepad2, 
   ArrowLeft, 
@@ -271,14 +272,13 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
                         </div>
                       )}
 
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-50 border border-zinc-150 overflow-hidden mb-2">
-                        {pkg.thumbnail ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={pkg.thumbnail} alt={pkg.package_name} className="w-full h-full object-cover" />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={game?.thumbnail} alt={pkg.package_name} className="w-full h-full object-cover" />
-                        )}
+                      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-zinc-50 border border-zinc-150 overflow-hidden mb-2 p-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={resolvePackageThumbnail(game, pkg)}
+                          alt={pkg.package_name}
+                          className="w-full h-full object-contain"
+                        />
                       </div>
 
                       <div>

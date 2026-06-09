@@ -1,43 +1,79 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Wrench, ArrowLeft, PhoneCall } from 'lucide-react';
-import Header from '../components/Header';
+import React from "react";
+import Link from "next/link";
+import { ArrowLeft, Globe, MessageCircle, PhoneCall } from "lucide-react";
+import Header from "../components/Header";
 
 export default function ContactPage() {
+  const facebookUrl = "https://www.facebook.com/share/18FL77BKHA/?mibextid=wwXIfr";
+  const zaloNumber = "0339793494";
+
   return (
-    <div className="flex flex-col min-h-screen bg-[#f4f6f9] text-zinc-800 font-sans">
+    <div className="flex min-h-screen flex-col bg-[#f4f6f9] font-sans text-zinc-800">
       <Header />
-      
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center max-w-[1400px] mx-auto w-full">
-        <div className="relative bg-white border border-zinc-100 p-8 sm:p-12 rounded-[2rem] shadow-xl max-w-lg w-full flex flex-col items-center">
-          {/* Blue blur glow in background */}
-          <div className="absolute -top-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 mb-6 relative">
-            <Wrench className="w-8 h-8 animate-bounce" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 rounded-full animate-ping"></span>
+
+      <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col items-center justify-center px-6 py-20 text-center">
+        <div className="relative flex w-full max-w-lg flex-col items-center rounded-[2rem] border border-zinc-100 bg-white p-8 shadow-xl sm:p-12">
+          <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+
+          <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+            <PhoneCall className="h-8 w-8" />
+            <span className="absolute -right-1 -top-1 h-3 w-3 animate-ping rounded-full bg-cyan-400" />
           </div>
 
-          <h1 className="font-extrabold text-2xl sm:text-3xl text-zinc-900 tracking-tight leading-tight uppercase">
-            Đang Xây Dựng
+          <h1 className="text-2xl font-extrabold uppercase tracking-tight text-zinc-900 sm:text-3xl">
+            Liên Hệ Hỗ Trợ
           </h1>
-          <h2 className="text-sm font-bold text-purple-600 mt-2 tracking-wider uppercase">
-            Trang Liên Hệ
+          <h2 className="mt-2 text-sm font-bold uppercase tracking-wider text-cyan-600">
+            Thịnh Sáng Shop
           </h2>
 
-          <p className="text-zinc-500 text-xs sm:text-sm mt-4 leading-relaxed max-w-sm font-medium">
-            Kênh liên hệ trực tuyến đang được tích hợp thêm nhiều cổng hỗ trợ để phục vụ quý khách tốt nhất. Vui lòng quay lại sau!
+          <p className="mt-4 max-w-sm text-xs font-medium leading-relaxed text-zinc-500 sm:text-sm">
+            Nếu cần hỗ trợ nạp ví, xác nhận giao dịch hoặc xử lý đơn hàng, liên hệ trực tiếp qua Facebook hoặc Zalo.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full mt-8">
-            <Link 
-              href="/" 
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md shadow-blue-500/15 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+          <div className="mt-8 grid w-full gap-3">
+            <a
+              href={facebookUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-left transition hover:border-blue-300 hover:bg-blue-100/70"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <span className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-blue-600" />
+                <span>
+                  <span className="block text-xs font-black uppercase tracking-wider text-zinc-900">Facebook</span>
+                  <span className="block text-[11px] text-zinc-500">Fanpage hỗ trợ</span>
+                </span>
+              </span>
+              <span className="text-[11px] font-bold text-blue-600">Mở link</span>
+            </a>
+
+            <a
+              href={`https://zalo.me/${zaloNumber}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between rounded-2xl border border-cyan-100 bg-cyan-50 px-5 py-4 text-left transition hover:border-cyan-300 hover:bg-cyan-100/70"
+            >
+              <span className="flex items-center gap-3">
+                <MessageCircle className="h-5 w-5 text-cyan-600" />
+                <span>
+                  <span className="block text-xs font-black uppercase tracking-wider text-zinc-900">Zalo</span>
+                  <span className="block text-[11px] text-zinc-500">{zaloNumber}</span>
+                </span>
+              </span>
+              <span className="text-[11px] font-bold text-cyan-600">Nhắn ngay</span>
+            </a>
+          </div>
+
+          <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
+            <Link
+              href="/"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-blue-500/15 transition-all duration-300 hover:scale-[1.02] hover:bg-blue-500 active:scale-[0.98]"
+            >
+              <ArrowLeft className="h-4 w-4" />
               Về Trang Chủ
             </Link>
           </div>

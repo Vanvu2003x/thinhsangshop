@@ -7,19 +7,15 @@ import { clientApi } from '../clientApi';
 import { 
   User, 
   Wallet, 
-  CreditCard, 
-  Coins, 
-  ArrowLeft, 
   Check, 
   Copy, 
   AlertTriangle,
   History,
   Send,
-  ShieldCheck,
   Gamepad2,
   QrCode,
-  ArrowRight,
-  Download
+  Globe,
+  MessageCircle
 } from 'lucide-react';
 import Header from '../components/Header';
 
@@ -102,6 +98,8 @@ function ProfileContent() {
 
   const username = userProfile?.email ? userProfile.email.split('@')[0] : (userProfile?.id || 'user');
   const memoCode = `TSD ${username}`.toUpperCase();
+  const facebookUrl = 'https://www.facebook.com/share/18FL77BKHA/?mibextid=wwXIfr';
+  const zaloNumber = '0339793494';
 
   const handleAtmSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,7 +315,7 @@ function ProfileContent() {
                     <div className="bg-white p-2.5 rounded-xl border border-zinc-700 shadow-inner relative overflow-hidden w-40 h-40 flex items-center justify-center mt-2.5">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
-                        src={`https://img.vietqr.io/image/MB-97042292026-compact2.png?amount=${atmAmount || 100000}&addInfo=${encodeURIComponent(memoCode)}&accountName=NGUYEN%20VAN%20THINH`} 
+                        src={`https://img.vietqr.io/image/TCB-1994291994-compact2.png?amount=${atmAmount || 100000}&addInfo=${encodeURIComponent(memoCode)}&accountName=${encodeURIComponent('NGUYEN XUAN THINH')}`} 
                         alt="VietQR Code" 
                         className={`w-36 h-36 object-contain transition-all duration-300 ${qrLoading ? 'opacity-30 blur-[2px]' : 'opacity-100 blur-0'}`}
                         onLoad={() => setQrLoading(false)}
@@ -348,7 +346,7 @@ function ProfileContent() {
 
                     {!copiedText && (
                       <div className="absolute top-4 right-4 bg-blue-600/20 border border-blue-500/30 text-blue-300 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider font-sans uppercase">
-                        MB BANK
+                        TECHCOMBANK
                       </div>
                     )}
 
@@ -359,10 +357,10 @@ function ProfileContent() {
                     <div className="space-y-1 mb-4">
                       <div className="text-[8px] text-zinc-400 font-sans tracking-widest uppercase">SỐ TÀI KHOẢN NHẬN</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg sm:text-xl font-black tracking-widest text-cyan-400 font-mono">9704 2292 026</span>
+                        <span className="text-lg sm:text-xl font-black tracking-widest text-cyan-400 font-mono">1994 2919 94</span>
                         <button 
                           type="button"
-                          onClick={() => handleCopy('97042292026', 'bank_no')} 
+                          onClick={() => handleCopy('1994291994', 'bank_no')} 
                           className="p-1.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-lg text-zinc-300 hover:text-white transition cursor-pointer"
                           title="Sao chép số tài khoản"
                         >
@@ -375,7 +373,7 @@ function ProfileContent() {
                     <div className="flex justify-between items-end">
                       <div className="space-y-0.5">
                         <div className="text-[8px] text-zinc-400 font-sans tracking-wider uppercase">CHỦ TÀI KHOẢN</div>
-                        <div className="font-extrabold text-xs tracking-wide uppercase font-mono">NGUYEN VAN THINH</div>
+                        <div className="font-extrabold text-xs tracking-wide uppercase font-mono">NGUYEN XUAN THINH</div>
                       </div>
                       <div className="space-y-0.5 text-right">
                         <div className="text-[8px] text-zinc-400 font-sans tracking-wider uppercase">NỘI DUNG CHUYỂN</div>
@@ -394,6 +392,45 @@ function ProfileContent() {
                     </div>
                   </div>
 
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-100 bg-zinc-50/60 p-5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <MessageCircle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black uppercase tracking-wider text-zinc-900">Liên hệ hỗ trợ</h4>
+                    <p className="text-[11px] text-zinc-500">Nếu chuyển khoản xong chưa được cộng tiền, nhắn ngay qua Facebook hoặc Zalo.</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <a
+                    href={facebookUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm text-zinc-800 transition hover:border-blue-300 hover:bg-blue-50"
+                  >
+                    <span className="flex items-center gap-2 font-semibold">
+                      <Globe className="w-4 h-4 text-blue-600" />
+                      Facebook
+                    </span>
+                    <span className="text-[11px] font-bold text-blue-600">Mở link</span>
+                  </a>
+                  <a
+                    href={`https://zalo.me/${zaloNumber}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between rounded-xl border border-cyan-100 bg-white px-4 py-3 text-sm text-zinc-800 transition hover:border-cyan-300 hover:bg-cyan-50"
+                  >
+                    <span className="flex items-center gap-2 font-semibold">
+                      <MessageCircle className="w-4 h-4 text-cyan-600" />
+                      Zalo
+                    </span>
+                    <span className="text-[11px] font-bold text-cyan-600">{zaloNumber}</span>
+                  </a>
                 </div>
               </div>
 
