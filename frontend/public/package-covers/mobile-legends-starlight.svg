@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="0.5" stop-color="#4338ca"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <radialGradient id="flare" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(842 226) rotate(90) scale(296)">
+      <stop stop-color="#fef3c7"/>
+      <stop offset="0.32" stop-color="#a78bfa" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#111827" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="750" rx="34" fill="url(#bg)"/>
+  <rect width="1200" height="750" rx="34" fill="url(#flare)"/>
+  <path d="M-84 602C200 434 416 674 692 456C892 300 1014 338 1280 154" stroke="#bfdbfe" stroke-width="28" stroke-opacity="0.24"/>
+  <path d="M-50 662C246 478 472 688 742 486C926 348 1038 382 1280 236" stroke="#fde68a" stroke-width="8" stroke-opacity="0.44"/>
+  <g transform="translate(720 114)">
+    <circle cx="126" cy="126" r="106" fill="#312e81" stroke="#c4b5fd" stroke-width="6"/>
+    <path d="M126 40L151 102L218 106L166 148L182 214L126 178L70 214L86 148L34 106L101 102L126 40Z" fill="#fde68a"/>
+    <path d="M126 66L144 110L192 113L154 145L166 192L126 168L86 192L98 145L60 113L108 110L126 66Z" fill="#fff7cc"/>
+  </g>
+  <text x="86" y="512" font-family="Arial Black, Arial, sans-serif" font-size="106" font-weight="900" fill="#ffffff" stroke="#041126" stroke-width="10" paint-order="stroke fill">MLBB</text>
+  <text x="86" y="618" font-family="Arial Black, Arial, sans-serif" font-size="92" font-weight="900" fill="#c4b5fd" stroke="#041126" stroke-width="10" paint-order="stroke fill">STARLIGHT</text>
+  <text x="92" y="680" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#fde68a">Elite week / starlight / premium reward pass</text>
+</svg>

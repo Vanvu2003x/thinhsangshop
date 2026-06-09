@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="0.5" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+    <radialGradient id="flare" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(828 220) rotate(90) scale(288)">
+      <stop stop-color="#f0abfc"/>
+      <stop offset="0.34" stop-color="#60a5fa" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#0b1120" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="750" rx="34" fill="url(#bg)"/>
+  <rect width="1200" height="750" rx="34" fill="url(#flare)"/>
+  <path d="M-76 612C208 454 408 672 676 470C872 320 990 358 1280 156" stroke="#93c5fd" stroke-width="26" stroke-opacity="0.24"/>
+  <path d="M-36 666C252 486 472 688 734 486C914 348 1020 386 1280 234" stroke="#f9a8d4" stroke-width="8" stroke-opacity="0.45"/>
+  <g transform="translate(722 124)">
+    <rect x="0" y="0" width="242" height="292" rx="34" fill="#101a36" stroke="#93c5fd" stroke-width="6"/>
+    <rect x="28" y="28" width="186" height="98" rx="20" fill="#1d4ed8"/>
+    <text x="120" y="88" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="54" font-weight="900" fill="#ffffff">7D</text>
+    <rect x="28" y="150" width="186" height="114" rx="24" fill="#0f766e" stroke="#67e8f9" stroke-width="4"/>
+    <text x="120" y="214" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="34" font-weight="900" fill="#e0f2fe">WEEKLY</text>
+    <text x="120" y="248" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="34" font-weight="900" fill="#f0abfc">PASS</text>
+  </g>
+  <text x="86" y="510" font-family="Arial Black, Arial, sans-serif" font-size="106" font-weight="900" fill="#ffffff" stroke="#041126" stroke-width="10" paint-order="stroke fill">MLBB</text>
+  <text x="86" y="614" font-family="Arial Black, Arial, sans-serif" font-size="92" font-weight="900" fill="#bfdbfe" stroke="#041126" stroke-width="10" paint-order="stroke fill">WEEKLY PASS</text>
+  <text x="92" y="676" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#f5d0fe">Weekly Diamond Pass / kim cuong tuan</text>
+</svg>

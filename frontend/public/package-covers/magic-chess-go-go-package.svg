@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#091733"/>
+      <stop offset="0.5" stop-color="#12357b"/>
+      <stop offset="1" stop-color="#0b7770"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(838 224) rotate(90) scale(286)">
+      <stop stop-color="#ffe082"/>
+      <stop offset="0.38" stop-color="#54f1ff" stop-opacity="0.82"/>
+      <stop offset="1" stop-color="#081120" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="750" rx="34" fill="url(#bg)"/>
+  <rect width="1200" height="750" rx="34" fill="url(#glow)"/>
+  <path d="M-90 592C188 430 380 668 650 464C842 318 970 360 1280 170" stroke="#6ee7f9" stroke-width="28" stroke-opacity="0.22"/>
+  <path d="M-74 650C214 472 420 686 694 494C874 366 996 406 1288 248" stroke="#facc15" stroke-width="8" stroke-opacity="0.45"/>
+  <g transform="translate(770 120)">
+    <circle cx="112" cy="112" r="112" fill="#10254e" stroke="#7dd3fc" stroke-width="6"/>
+    <path d="M112 24L139 85L205 91L154 135L169 202L112 168L55 202L70 135L19 91L85 85L112 24Z" fill="#fde68a"/>
+    <path d="M112 56L130 97L174 100L140 130L150 176L112 153L74 176L84 130L50 100L94 97L112 56Z" fill="#fff7cc"/>
+  </g>
+  <g transform="translate(84 84)">
+    <rect width="212" height="58" rx="16" fill="#061226" fill-opacity="0.68" stroke="#72f0ff" stroke-opacity="0.18"/>
+    <text x="24" y="36" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#e8fbff" opacity="0.78">SHOP THINH SANG</text>
+  </g>
+  <text x="88" y="510" font-family="Arial Black, Arial, sans-serif" font-size="110" font-weight="900" fill="#ffffff" stroke="#041126" stroke-width="10" paint-order="stroke fill">MAGIC CHESS</text>
+  <text x="88" y="616" font-family="Arial Black, Arial, sans-serif" font-size="96" font-weight="900" fill="#67e8f9" stroke="#041126" stroke-width="10" paint-order="stroke fill">TOP UP</text>
+  <text x="92" y="674" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#fde68a">Diamonds, weekly pass, monthly value</text>
+</svg>

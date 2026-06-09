@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06153a"/>
+      <stop offset="0.48" stop-color="#0d46a6"/>
+      <stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+    <radialGradient id="flare" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(852 238) rotate(90) scale(300)">
+      <stop stop-color="#fef08a"/>
+      <stop offset="0.34" stop-color="#38bdf8" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#06103a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="750" rx="34" fill="url(#bg)"/>
+  <rect width="1200" height="750" rx="34" fill="url(#flare)"/>
+  <path d="M-80 580C230 392 420 640 690 430C880 282 1018 318 1280 132" stroke="#22d3ee" stroke-width="30" stroke-opacity="0.28"/>
+  <path d="M-40 662C260 468 480 675 728 470C904 324 1005 358 1270 210" stroke="#fde047" stroke-width="9" stroke-opacity="0.54"/>
+  <g transform="translate(732 120)">
+    <path d="M150 0L284 78L284 234L150 312L16 234L16 78L150 0Z" fill="#0c2b64" stroke="#7ef4ff" stroke-width="7"/>
+    <path d="M150 36L248 92L248 220L150 276L52 220L52 92L150 36Z" fill="#1367c8" stroke="#ffd76b" stroke-width="5"/>
+    <path d="M151 78L186 156L151 234L116 156L151 78Z" fill="#e9fbff"/>
+    <path d="M86 156H216" stroke="#bdf8ff" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(84 84)">
+    <rect width="212" height="58" rx="16" fill="#061226" fill-opacity="0.68" stroke="#72f0ff" stroke-opacity="0.18"/>
+    <text x="24" y="36" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#e8fbff" opacity="0.78">SHOP THINH SANG</text>
+  </g>
+  <text x="86" y="520" font-family="Arial Black, Arial, sans-serif" font-size="112" font-weight="900" fill="#ffffff" stroke="#041126" stroke-width="10" paint-order="stroke fill">MLBB</text>
+  <text x="86" y="626" font-family="Arial Black, Arial, sans-serif" font-size="94" font-weight="900" fill="#67e8f9" stroke="#041126" stroke-width="10" paint-order="stroke fill">DIAMONDS</text>
+  <text x="92" y="686" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#fde047">Nap nhanh - gia tot - xu ly tu dong</text>
+</svg>
