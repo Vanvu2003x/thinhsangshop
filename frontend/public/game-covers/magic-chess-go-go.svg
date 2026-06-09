@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#081436"/>
+      <stop offset="0.48" stop-color="#102b68"/>
+      <stop offset="1" stop-color="#0a6c74"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(820 230) rotate(90) scale(270)">
+      <stop stop-color="#f9d76b"/>
+      <stop offset="0.36" stop-color="#38e6ff" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#071326" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#38e6ff" flood-opacity="0.75"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="28" flood-color="#f9d76b" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="750" rx="34" fill="url(#bg)"/>
+  <rect width="1200" height="750" rx="34" fill="url(#orb)"/>
+  <path d="M-80 582C180 430 358 658 612 474C818 325 934 370 1280 180" stroke="#6ff5ff" stroke-width="28" stroke-opacity="0.25" fill="none"/>
+  <path d="M-90 642C208 462 392 680 660 488C856 347 980 392 1280 242" stroke="#f9d76b" stroke-width="8" stroke-opacity="0.5" fill="none"/>
+  <g opacity="0.24">
+    <path d="M80 0V750M230 0V750M380 0V750M530 0V750M680 0V750M830 0V750M980 0V750M1130 0V750" stroke="#ffffff"/>
+    <path d="M0 75H1200M0 225H1200M0 375H1200M0 525H1200M0 675H1200" stroke="#ffffff"/>
+  </g>
+  <g filter="url(#glow)">
+    <circle cx="820" cy="230" r="112" fill="#10244d" stroke="#78f4ff" stroke-width="6"/>
+    <path d="M820 114L850 196L938 202L868 256L890 342L820 292L750 342L772 256L702 202L790 196L820 114Z" fill="#f9d76b"/>
+    <path d="M820 152L840 207L900 211L852 248L868 306L820 272L772 306L788 248L740 211L800 207L820 152Z" fill="#fff6b7"/>
+  </g>
+  <g transform="translate(84 86)">
+    <rect width="190" height="58" rx="16" fill="#061226" fill-opacity="0.68" stroke="#72f0ff" stroke-opacity="0.18"/>
+    <text x="24" y="36" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#e8fbff" opacity="0.78">THINH SANG SHOP</text>
+  </g>
+  <text x="86" y="548" font-family="Arial Black, Arial, sans-serif" font-size="116" font-weight="900" fill="#ffffff" stroke="#041126" stroke-width="10" paint-order="stroke fill">MAGIC</text>
+  <text x="86" y="652" font-family="Arial Black, Arial, sans-serif" font-size="102" font-weight="900" fill="#65eeff" stroke="#041126" stroke-width="10" paint-order="stroke fill">CHESS</text>
+  <text x="92" y="704" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#f9d76b">Nap nhanh - Tu dong</text>
+</svg>
