@@ -194,7 +194,7 @@ const createGameImage = (game: any) => {
       </g>
       <rect x="62" y="62" width="236" height="82" rx="20" fill="#020617" fill-opacity="0.34" stroke="#ffffff" stroke-opacity="0.12" />
       <text x="88" y="100" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="${theme.accent}" letter-spacing="3">${theme.label}</text>
-      <text x="88" y="130" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#e5e7eb" opacity="0.78">THINH SANG SHOP</text>
+      <text x="88" y="130" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#e5e7eb" opacity="0.78">SHOP THINH SANG</text>
       <text x="70" y="432" font-family="Arial, sans-serif" font-size="112" font-weight="900" fill="#ffffff" opacity="0.95">${initials}</text>
       <text x="74" y="480" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#ffffff" opacity="0.92">${safeTitle}</text>
       <text x="76" y="516" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="${theme.accent}" opacity="0.95">Nap nhanh - An toan - Gia tot</text>
@@ -251,13 +251,13 @@ export default function ClientHomePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hero-moba-bg.png"
-            alt="Thịnh Sáng Shop hero banner"
+            alt="Shop Thịnh Sáng hero banner"
             className="absolute inset-0 hidden h-full w-full object-cover object-center sm:block"
           />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hero-moba-mobile-bg.png"
-            alt="Thịnh Sáng Shop mobile hero banner"
+            alt="Shop Thịnh Sáng mobile hero banner"
             className="absolute inset-0 h-full w-full object-cover object-center sm:hidden"
           />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(55,70,105,0.85)_0%,rgba(55,70,105,0.45)_34%,rgba(55,70,105,0.15)_64%,rgba(55,70,105,0.65)_100%)] sm:bg-[linear-gradient(90deg,rgba(55,70,105,0.98)_0%,rgba(55,70,105,0.88)_34%,rgba(55,70,105,0.28)_68%,rgba(55,70,105,0.15)_100%)]" />
@@ -270,8 +270,8 @@ export default function ClientHomePage() {
               </div>
 
               <h1 className="max-w-xl text-5xl font-black uppercase leading-[1.08] tracking-tighter text-white sm:text-6xl lg:text-7xl">
-                <span className="block drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]">THỊNH SÁNG</span>
-                <span className="block bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(34,211,238,0.15)]">SHOP</span>
+                <span className="block drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]">SHOP</span>
+                <span className="block bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(34,211,238,0.15)]">THỊNH SÁNG</span>
               </h1>
               <p className="mt-4 max-w-[300px] text-[11px] font-semibold leading-5 text-cyan-50/90 sm:mt-6 sm:max-w-xl sm:text-base sm:leading-7 lg:text-lg">
                 Nạp UID game Rẻ Nhanh chóng chất lượng
@@ -406,7 +406,7 @@ export default function ClientHomePage() {
 
       <footer className="w-full border-t border-[#374669]/20 bg-[#243049] py-8 text-center text-xs text-zinc-400">
         <p className="font-semibold text-zinc-300">
-          © 2026 Thịnh Sáng Shop - Hệ thống nạp game tự động uy tín
+          © 2026 Shop Thịnh Sáng - Hệ thống nạp game tự động uy tín
         </p>
         <div className="mt-3 flex justify-center gap-4 text-[10px] font-semibold text-cyan-400">
           <Link href="/admin/login" className="hover:text-cyan-300">

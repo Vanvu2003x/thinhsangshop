@@ -1,7 +1,7 @@
 {
     "name": "thinhsangshop-be",
     "version": "1.0.0",
-    "description": "Backend for Thịnh Sáng Shop",
+    "description": "Backend for Shop Thịnh Sáng",
     "main": "src/server.js",
     "scripts": {
         "dev": "nodemon src/server.js",

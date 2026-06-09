@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { clientApi } from '../../clientApi';
@@ -14,7 +14,6 @@ import {
   Sparkles, 
   AlertTriangle,
   HelpCircle,
-  Package,
   History
 } from 'lucide-react';
 import Header from '../../components/Header';
@@ -36,10 +35,15 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
   const [quantity, setQuantity] = useState<number>(1);
   const [paymentMethod, setPaymentMethod] = useState<string>('wallet'); // 'wallet', 'atm', 'card'
   
-  // Character name checking simulation
-  const [checkingName, setCheckingName] = useState(false);
-  const [characterName, setCharacterName] = useState('');
+  const checkoutColRef = useRef<HTMLDivElement>(null);
 
+  const handleSelectPackage = (pkgId: string) => {
+    setSelectedPkgId(pkgId);
+    setTimeout(() => {
+      checkoutColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+  
   // Submit messages
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -81,27 +85,6 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
       ...prev,
       [fieldName]: value
     }));
-    setCharacterName(''); // Reset character check when input changes
-  };
-
-  const handleCheckCharacterName = () => {
-    // Validate that required fields are filled
-    const fields = game.input_fields || [];
-    for (const f of fields) {
-      if (f.required && !accountData[f.name]) {
-        alert(`Vui lòng điền trường ${f.label}`);
-        return;
-      }
-    }
-
-    setCheckingName(true);
-    setTimeout(() => {
-      setCheckingName(false);
-      // Simulate random character names
-      const sampleNames = ["GamerPro99", "ThịnhSángVIP", "MLBB_GodMode", "TopupMaster", "ZeroHero"];
-      const randomIdx = Math.floor(Math.random() * sampleNames.length);
-      setCharacterName(sampleNames[randomIdx]);
-    }, 1000);
   };
 
   const handleRechargeSubmit = async (e: React.FormEvent) => {
@@ -151,9 +134,28 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
 
     setSubmitting(true);
     try {
-      const res = await clientApi.createOrder(selectedPkgId, quantity, accountData);
-      if (res.success) {
-        setSuccessMsg("Tạo đơn hàng nạp thành công! Hệ thống đang tự động xử lý đơn.");
+      let success = true;
+      let lastMessage = "";
+
+      if (quantity > 1) {
+        for (let i = 0; i < quantity; i++) {
+          const res = await clientApi.createOrder(selectedPkgId, 1, accountData);
+          if (!res.success) {
+            success = false;
+            lastMessage = res.message || `Tạo đơn thứ ${i + 1} thất bại.`;
+            break;
+          }
+        }
+      } else {
+        const res = await clientApi.createOrder(selectedPkgId, 1, accountData);
+        if (!res.success) {
+          success = false;
+          lastMessage = res.message || "Tạo đơn thất bại.";
+        }
+      }
+
+      if (success) {
+        setSuccessMsg(quantity > 1 ? `Tạo ${quantity} đơn hàng nạp thành công! Hệ thống đang xử lý.` : "Tạo đơn hàng nạp thành công! Hệ thống đang tự động xử lý đơn.");
         // Reload profile to reflect new balance
         const freshProfile = await clientApi.getProfile();
         setUserProfile(freshProfile);
@@ -161,7 +163,7 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
           router.push('/history');
         }, 1500);
       } else {
-        setErrorMsg(res.message || "Tạo đơn thất bại.");
+        setErrorMsg(lastMessage || "Tạo đơn thất bại.");
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Giao dịch lỗi. Vui lòng liên hệ hỗ trợ.");
@@ -230,24 +232,6 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
                 </div>
               ))}
             </div>
-
-            {/* Check Name Button */}
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center pt-2">
-              <button 
-                type="button"
-                onClick={handleCheckCharacterName}
-                disabled={checkingName}
-                className="px-4 py-2 bg-zinc-50 border border-zinc-200 hover:bg-zinc-100 text-zinc-700 font-semibold rounded-xl text-xs transition cursor-pointer"
-              >
-                {checkingName ? 'Đang kiểm tra...' : 'Kiểm tra nhân vật'}
-              </button>
-              {characterName && (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Tên nhân vật: {characterName}</span>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* STEP 2: SELECT PACKAGE CARD */}
@@ -260,7 +244,7 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
             {packages.length === 0 ? (
               <p className="text-zinc-500 text-xs py-4 text-center">Trò chơi này hiện chưa có gói nạp nào hoạt động.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {packages.map((pkg) => {
                   const isSelected = selectedPkgId === pkg.id;
                   
@@ -273,8 +257,8 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
                     <button
                       key={pkg.id}
                       type="button"
-                      onClick={() => setSelectedPkgId(pkg.id)}
-                      className={`relative flex flex-col justify-between border rounded-2xl p-4 text-left transition-all duration-200 shadow-sm cursor-pointer ${
+                      onClick={() => handleSelectPackage(pkg.id)}
+                      className={`relative flex flex-col justify-between border rounded-xl p-3 text-left transition-all duration-200 shadow-sm cursor-pointer ${
                         isSelected 
                           ? 'bg-blue-50/50 border-blue-500 text-zinc-900 ring-1 ring-blue-500' 
                           : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50 text-zinc-700'
@@ -282,23 +266,24 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
                     >
                       {/* Package check dot */}
                       {isSelected && (
-                        <div className="absolute top-2.5 right-2.5 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white">
-                          <Check className="w-2.5 h-2.5" />
+                        <div className="absolute top-2 right-2 w-3.5 h-3.5 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                          <Check className="w-2 h-2" />
                         </div>
                       )}
 
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-50 border border-zinc-150 overflow-hidden mb-3.5">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-50 border border-zinc-150 overflow-hidden mb-2">
                         {pkg.thumbnail ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={pkg.thumbnail} alt={pkg.package_name} className="w-full h-full object-cover" />
                         ) : (
-                          <Package className="w-5 h-5 text-blue-500" />
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={game?.thumbnail} alt={pkg.package_name} className="w-full h-full object-cover" />
                         )}
                       </div>
 
                       <div>
-                        <div className="text-xs font-bold leading-snug line-clamp-2 h-8 text-zinc-800">{pkg.package_name}</div>
-                        <div className="text-xs font-mono font-bold text-blue-600 mt-2">{Number(displayPrice).toLocaleString('vi-VN')}đ</div>
+                        <div className="text-[11px] font-bold leading-tight line-clamp-2 h-7 text-zinc-800">{pkg.package_name}</div>
+                        <div className="text-xs font-mono font-bold text-blue-600 mt-1">{Number(displayPrice).toLocaleString('vi-VN')}đ</div>
                       </div>
                     </button>
                   );
@@ -311,7 +296,7 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
         {/* Right Checkout Col (Step 3 and Order Summary) */}
         <div className="space-y-6">
           {/* STEP 3: PAYMENT METHOD */}
-          <div className="bg-white border border-zinc-150 rounded-2xl p-6 shadow-sm space-y-5">
+          <div ref={checkoutColRef} className="bg-white border border-zinc-150 rounded-2xl p-6 shadow-sm space-y-5">
             <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
               <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">3</span>
               <h3 className="font-bold text-sm text-zinc-800 uppercase tracking-wider">Phương thức thanh toán</h3>
@@ -331,7 +316,7 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
                 <div className="flex items-center gap-3">
                   <Coins className="w-5 h-5 text-blue-600" />
                   <div>
-                    <span className="text-xs font-bold block text-zinc-800">Số dư ví (Thịnh Sáng)</span>
+                    <span className="text-xs font-bold block text-zinc-800">Số dư ví (Shop Thịnh Sáng)</span>
                     <span className="text-[10px] text-zinc-400 font-medium">Khuyên dùng, xử lý ngay lập tức</span>
                   </div>
                 </div>
@@ -340,24 +325,22 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
                 )}
               </button>
 
-              {/* ATM Bank Transfer */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('atm')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl text-left transition-all cursor-pointer ${
-                  paymentMethod === 'atm' 
-                    ? 'bg-blue-50/50 border-blue-500 text-zinc-900 ring-1 ring-blue-500' 
-                    : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
-                }`}
+              {/* ATM Bank Transfer (Locked) */}
+              <div
+                className="w-full flex items-center justify-between p-4 border border-zinc-200 bg-zinc-50 text-zinc-400 rounded-2xl text-left cursor-not-allowed relative overflow-hidden"
+                title="Phương thức chuyển khoản ATM trực tiếp đang tạm khóa. Vui lòng nạp tiền vào ví ở trang Cá nhân."
               >
                 <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5 text-cyan-600" />
+                  <CreditCard className="w-5 h-5 text-zinc-300" />
                   <div>
-                    <span className="text-xs font-bold block text-zinc-800">Chuyển khoản ATM</span>
-                    <span className="text-[10px] text-zinc-400 font-medium">Nạp ví ATM nhận tiền sau 1-3 phút</span>
+                    <span className="text-xs font-bold block text-zinc-400 flex items-center gap-1.5">
+                      Chuyển khoản ATM
+                      <span className="px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-500 text-[8px] font-extrabold uppercase tracking-wider">Tạm khóa</span>
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-medium">Vui lòng nạp ví ở trang cá nhân để thanh toán</span>
                   </div>
                 </div>
-              </button>
+              </div>
             </div>
           </div>
 
@@ -411,9 +394,19 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
             </div>
 
             {errorMsg && (
-              <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl p-3 text-xs font-semibold">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMsg}</span>
+              <div className="flex flex-col gap-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl p-3 text-xs font-semibold">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+                {errorMsg.includes("Số dư ví không đủ") && (
+                  <Link 
+                    href="/profile" 
+                    className="mt-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition text-[10px] uppercase tracking-wider self-start"
+                  >
+                    Nạp ví ngay tại đây
+                  </Link>
+                )}
               </div>
             )}
 
@@ -438,7 +431,7 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
 
       {/* Footer bar */}
       <footer className="mt-16 w-full border-t border-[#374669]/20 bg-[#243049] py-8 text-center text-xs text-zinc-400">
-        <p className="font-semibold text-zinc-300">© 2026 Thịnh Sáng Shop - Hệ thống nạp game tự động uy tín</p>
+        <p className="font-semibold text-zinc-300">© 2026 Shop Thịnh Sáng - Hệ thống nạp game tự động uy tín</p>
         <div className="mt-3 flex justify-center gap-4 text-[10px] font-semibold text-cyan-400">
           <Link href="/admin/login" className="hover:text-cyan-300">
             Cổng Admin

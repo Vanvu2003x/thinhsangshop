@@ -23,14 +23,14 @@
       .topText {
         font-family: Impact, "Arial Black", sans-serif;
         font-weight: 900;
-        letter-spacing: 4px;
+        letter-spacing: 12px;
         paint-order: stroke fill;
         stroke-linejoin: round;
       }
       .shopText {
         font-family: Impact, "Arial Black", sans-serif;
         font-weight: 900;
-        letter-spacing: 10px;
+        letter-spacing: 4px;
         paint-order: stroke fill;
         stroke-linejoin: round;
       }
@@ -38,13 +38,13 @@
   </defs>
 
   <g filter="url(#logoGlow)">
-    <text class="topText" x="600" y="190" text-anchor="middle" font-size="134" fill="url(#topFill)" stroke="#03142f" stroke-width="24">THỊNH SÁNG</text>
-    <text class="topText" x="600" y="190" text-anchor="middle" font-size="134" fill="url(#topFill)" stroke="#7ef3ff" stroke-width="3.5" opacity="0.95">THỊNH SÁNG</text>
+    <text class="topText" x="600" y="190" text-anchor="middle" font-size="160" fill="url(#topFill)" stroke="#03142f" stroke-width="24">SHOP</text>
+    <text class="topText" x="600" y="190" text-anchor="middle" font-size="160" fill="url(#topFill)" stroke="#7ef3ff" stroke-width="3.5" opacity="0.95">SHOP</text>
 
     <path d="M210 232H990" stroke="#1fe8ff" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
     <path d="M286 252H914" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.78"/>
 
-    <text class="shopText" x="600" y="374" text-anchor="middle" font-size="178" fill="url(#shopFill)" stroke="#03142f" stroke-width="24">SHOP</text>
-    <text class="shopText" x="600" y="374" text-anchor="middle" font-size="178" fill="url(#shopFill)" stroke="#b3fbff" stroke-width="4" opacity="0.95">SHOP</text>
+    <text class="shopText" x="600" y="374" text-anchor="middle" font-size="140" fill="url(#shopFill)" stroke="#03142f" stroke-width="24">THỊNH SÁNG</text>
+    <text class="shopText" x="600" y="374" text-anchor="middle" font-size="140" fill="url(#shopFill)" stroke="#b3fbff" stroke-width="4" opacity="0.95">THỊNH SÁNG</text>
   </g>
 </svg>

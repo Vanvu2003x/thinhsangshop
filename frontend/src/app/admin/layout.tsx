@@ -98,10 +98,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="h-16 px-6 flex items-center justify-between border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-tr from-purple-600 to-cyan-500 rounded-lg flex items-center justify-center font-bold text-white text-lg">
-              T
+              S
             </div>
             <span className="font-bold text-lg bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-              Thịnh Sáng Admin
+              Shop Thịnh Sáng Admin
             </span>
           </div>
           <button className="xl:hidden text-zinc-400 hover:text-white" onClick={() => setSidebarOpen(false)}>

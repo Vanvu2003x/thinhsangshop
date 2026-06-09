@@ -30,9 +30,9 @@ const allowedOrigins = getAllowedOrigins();
 
 const io = new Server(socketServer, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
-    credentials: false
+    credentials: true
   },
   pingTimeout: 60000,
   pingInterval: 25000

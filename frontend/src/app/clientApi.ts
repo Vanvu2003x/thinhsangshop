@@ -1,6 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
 
-const isBrowser = typeof window !== 'undefined';
+const isBrowser = typeof window !== "undefined";
 
 const setCookie = (name: string, value: string, days = 7) => {
   if (!isBrowser) return;
@@ -11,15 +11,15 @@ const setCookie = (name: string, value: string, days = 7) => {
 
 const getCookie = (name: string): string | null => {
   if (!isBrowser) return null;
-  const nameEQ = name + "=";
-  const ca = document.cookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
+  const nameEQ = `${name}=`;
+  const ca = document.cookie.split(";");
+  for (let i = 0; i < ca.length; i += 1) {
     let c = ca[i];
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    while (c.charAt(0) === " ") c = c.substring(1, c.length);
     if (c.indexOf(nameEQ) === 0) {
       try {
         return decodeURIComponent(c.substring(nameEQ.length, c.length));
-      } catch (e) {
+      } catch {
         return c.substring(nameEQ.length, c.length);
       }
     }
@@ -32,222 +32,176 @@ const eraseCookie = (name: string) => {
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 };
 
-export const clientApi = {
-  // Client authentication
-  login: async (email: string, password: any) => {
-    const res = await fetch(`${API_URL}/users/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (isBrowser) {
-        setCookie('clientToken', data.token);
-      }
-      
-      // Fetch user profile immediately to store in cookies
-      const profileRes = await fetch(`${API_URL}/users`, {
-        headers: { 'Authorization': `Bearer ${data.token}` }
-      });
-      let user = null;
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        user = profileData.user;
-        if (isBrowser && user) {
-          setCookie('clientUser', JSON.stringify(user));
-          if (user.role === 'admin') {
-            setCookie('adminToken', data.token);
-            setCookie('adminUser', JSON.stringify(user));
-          }
-        }
-      }
-      return { success: true, user };
+type ApiGamePackage = {
+  game_id: string;
+};
+
+type AccountInfoPayload = Record<string, unknown>;
+
+const fetchJson = async (input: string, init: RequestInit = {}) => {
+  const token = isBrowser ? getCookie("clientToken") : null;
+  const response = await fetch(input, {
+    ...init,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      ...(init.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || "YÃªu cáº§u tháº¥t báº¡i");
+  }
+
+  if (response.status === 204) return null;
+  return response.json().catch(() => null);
+};
+
+const fetchProfile = async () => {
+  const data = await fetchJson(`${API_URL}/users`, {
+    method: "GET",
+    headers: {},
+  });
+
+  if (isBrowser && data?.user) {
+    setCookie("clientUser", JSON.stringify(data.user));
+    if (data.user.role === "admin") {
+      setCookie("adminUser", JSON.stringify(data.user));
     }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Tài khoản hoặc mật khẩu không chính xác!");
+  }
+
+  return data?.user || null;
+};
+
+export const clientApi = {
+  login: async (email: string, password: string) => {
+    await fetchJson(`${API_URL}/users/login`, {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+
+    const user = await fetchProfile();
+    return { success: true, user };
   },
 
-  register: async (name: string, email: string, password: any) => {
-    const res = await fetch(`${API_URL}/users/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
+  register: async (name: string, email: string, password: string) => {
+    await fetchJson(`${API_URL}/users/register`, {
+      method: "POST",
+      body: JSON.stringify({ name, email, password }),
     });
-    if (res.ok) {
-      return { success: true };
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Đăng ký tài khoản thất bại. Email có thể đã được sử dụng!");
+
+    return { success: true };
   },
 
   checkAuth: () => {
     if (!isBrowser) return null;
-    const token = getCookie('clientToken');
-    const user = getCookie('clientUser');
-    if (token && user) {
-      try {
-        return JSON.parse(user);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  },
+    const user = getCookie("clientUser");
+    if (!user) return null;
 
-  logout: () => {
-    if (isBrowser) {
-      eraseCookie('clientToken');
-      eraseCookie('clientUser');
-      eraseCookie('adminToken');
-      eraseCookie('adminUser');
+    try {
+      return JSON.parse(user);
+    } catch {
+      return null;
     }
   },
 
-  getProfile: async () => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    if (!token) return null;
-    const res = await fetch(`${API_URL}/users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (isBrowser && data.user) {
-        setCookie('clientUser', JSON.stringify(data.user));
-      }
-      return data.user;
+  logout: async () => {
+    try {
+      await fetchJson(`${API_URL}/users/logout`, {
+        method: "POST",
+        headers: {},
+      });
+    } catch {
+      // Clear local user cache even if the server cookie is already gone.
     }
-    throw new Error("Không thể tải thông tin hồ sơ của bạn.");
+
+    eraseCookie("clientUser");
+    eraseCookie("adminUser");
   },
 
-  // Game details
+  getProfile: async () => fetchProfile(),
+
   getGames: async () => {
-    const res = await fetch(`${API_URL}/games`);
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    return [];
+    const res = await fetch(`${API_URL}/games`, { credentials: "include" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data || data;
   },
 
   getPackagesByGameId: async (gameId: string) => {
-    const res = await fetch(`${API_URL}/toup-package?game_id=${gameId}`);
-    if (res.ok) {
-      const data = await res.json();
-      return (data.data || data).filter((p: any) => p.game_id === gameId);
-    }
-    return [];
+    const res = await fetch(`${API_URL}/toup-package?game_id=${gameId}`, { credentials: "include" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.data || data).filter((p: ApiGamePackage) => p.game_id === gameId);
   },
 
-  // Orders
-  createOrder: async (packageId: string, quantity: number, accountInfo: any) => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    const res = await fetch(`${API_URL}/order`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+  createOrder: async (packageId: string, quantity: number, accountInfo: AccountInfoPayload) => {
+    const data = await fetchJson(`${API_URL}/order`, {
+      method: "POST",
       body: JSON.stringify({
         package_id: packageId,
         quantity,
-        account_info: accountInfo
-      })
+        account_info: accountInfo,
+      }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        success: true,
-        message: "Tạo đơn hàng thành công!",
-        order: data
-      };
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Giao dịch thất bại");
+
+    return {
+      success: true,
+      message: "Táº¡o Ä‘Æ¡n hÃ ng thÃ nh cÃ´ng!",
+      order: data,
+    };
   },
 
   getOrdersHistory: async () => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    const res = await fetch(`${API_URL}/order/history`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/order/history`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.orders || data;
-    }
-    return [];
+    return data?.orders || data || [];
   },
 
-  // Deposit wallet logs (ATM bank / Card)
   submitWalletLog: async (amount: number, type: string, description: string) => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    const res = await fetch(`${API_URL}/toup-wallet-log`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ amount, type, description })
+    return fetchJson(`${API_URL}/toup-wallet-log`, {
+      method: "POST",
+      body: JSON.stringify({ amount, type, description }),
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Gửi yêu cầu nạp ví thất bại");
   },
 
   getWalletLogs: async () => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    const res = await fetch(`${API_URL}/toup-wallet-log/user-logs`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/toup-wallet-log/user-logs`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    return [];
+    return data?.data || data || [];
   },
 
-  // Client Accounts
   getAllAcc: async (game_id: string, keyword?: string, min?: number, max?: number, page = 1, limit = 10) => {
     let url = `${API_URL}/acc/game?game_id=${game_id}&page=${page}&limit=${limit}`;
     if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
     if (min !== undefined) url += `&min=${min}`;
     if (max !== undefined) url += `&max=${max}`;
 
-    const res = await fetch(url);
-    if (res.ok) {
-      return await res.json();
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) {
+      return { total: 0, data: { data: [] } };
     }
-    return { total: 0, data: { data: [] } };
+    return res.json();
   },
 
   buyAccount: async (orderInfo: { acc_id: string; contact_info: { phone: string; zalo: string; email: string } }) => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    const res = await fetch(`${API_URL}/accOrder`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(orderInfo)
+    return fetchJson(`${API_URL}/accOrder`, {
+      method: "POST",
+      body: JSON.stringify(orderInfo),
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Mua tài khoản thất bại");
   },
 
   getMyAccountOrders: async () => {
-    const token = isBrowser ? getCookie('clientToken') : null;
-    const res = await fetch(`${API_URL}/accOrder/my-orders`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/accOrder/my-orders`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const responseData = await res.json();
-      return responseData.data || responseData;
-    }
-    return [];
-  }
+    return data?.data || data || [];
+  },
 };

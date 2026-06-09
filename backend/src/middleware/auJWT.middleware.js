@@ -5,10 +5,10 @@ const checkToken = (req, res, next) => {
   let token;
   const authHeader = req.headers.authorization;
 
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
-  } else if (authHeader && authHeader.startsWith("Bearer ")) {
+  if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
   }
 
   if (!token) {
@@ -37,10 +37,10 @@ const checkRoleMDW = async (req, res, next) => {
   let token;
   const authHeader = req.headers.authorization;
 
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
-  } else if (authHeader && authHeader.startsWith("Bearer ")) {
+  if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
   }
 
   if (!token) {
@@ -87,10 +87,10 @@ const checkIsAdmin = async (req, res, next) => {
 
   req.isAdmin = false;
 
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
-  } else if (authHeader && authHeader.startsWith("Bearer ")) {
+  if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
   }
 
   if (!token) {
@@ -126,10 +126,10 @@ const optionalAuth = async (req, res, next) => {
   try {
     let token = null;
 
-    if (req.cookies?.token) {
-      token = req.cookies.token;
-    } else if (req.headers.authorization?.startsWith("Bearer ")) {
+    if (req.headers.authorization?.startsWith("Bearer ")) {
       token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
     }
 
     if (!token) return next();

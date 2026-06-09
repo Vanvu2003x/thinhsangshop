@@ -73,7 +73,7 @@ export default function ClientLoginPage() {
                 Đăng Nhập Cửa Hàng
               </h1>
               <p className="text-zinc-500 text-xs sm:text-sm mt-2.5 font-medium leading-relaxed">
-                Đăng nhập tài khoản Thịnh Sáng Shop để nạp dịch vụ
+                Đăng nhập tài khoản Shop Thịnh Sáng để nạp dịch vụ
               </p>
             </div>
 
@@ -148,7 +148,7 @@ export default function ClientLoginPage() {
 
       {/* Footer bar */}
       <footer className="mt-16 w-full border-t border-[#374669]/20 bg-[#243049] py-8 text-center text-xs text-zinc-400">
-        <p className="font-semibold text-zinc-300">© 2026 Thịnh Sáng Shop - Hệ thống nạp game tự động uy tín</p>
+        <p className="font-semibold text-zinc-300">© 2026 Shop Thịnh Sáng - Hệ thống nạp game tự động uy tín</p>
         <div className="mt-3 flex justify-center gap-4 text-[10px] font-semibold text-cyan-400">
           <Link href="/admin/login" className="hover:text-cyan-300">
             Cổng Admin

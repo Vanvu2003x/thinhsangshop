@@ -22,5 +22,6 @@ router.post('/role/send-otp', checkRoleMDW, AuthController.sendRoleOTP);
 router.post('/role/verify-otp', checkRoleMDW, AuthController.verifyRoleOTP);
 
 router.put('/:id/level', checkRoleMDW, UserController.updateUserLevel);
+router.put('/:id', checkRoleMDW, UserController.updateUser);
 
 module.exports = router;

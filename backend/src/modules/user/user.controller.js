@@ -42,6 +42,11 @@ const UserController = {
     updateUserLevel: asyncHandler(async (req, res) => {
         const result = await UserService.updateUserLevel(req.params.id, req.body.level);
         return res.json(result);
+    }),
+
+    updateUser: asyncHandler(async (req, res) => {
+        const result = await UserService.updateUser(req.params.id, req.body);
+        return res.status(200).json(result);
     })
 };
 

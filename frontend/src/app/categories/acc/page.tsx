@@ -2,7 +2,7 @@ import AccClient from './components/AccClient';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Mua Bán Tài Khoản Game | Thịnh Sáng Shop',
+  title: 'Mua Bán Tài Khoản Game | Shop Thịnh Sáng',
   description: 'Danh sách tài khoản game giá rẻ, uy tín. Bàn giao nhanh chóng tự động sau khi đặt mua trực tiếp bằng ví.',
 };
 

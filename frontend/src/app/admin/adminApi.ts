@@ -1,6 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
 
-const isBrowser = typeof window !== 'undefined';
+const isBrowser = typeof window !== "undefined";
 
 const setCookie = (name: string, value: string, days = 7) => {
   if (!isBrowser) return;
@@ -11,15 +11,15 @@ const setCookie = (name: string, value: string, days = 7) => {
 
 const getCookie = (name: string): string | null => {
   if (!isBrowser) return null;
-  const nameEQ = name + "=";
-  const ca = document.cookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
+  const nameEQ = `${name}=`;
+  const ca = document.cookie.split(";");
+  for (let i = 0; i < ca.length; i += 1) {
     let c = ca[i];
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    while (c.charAt(0) === " ") c = c.substring(1, c.length);
     if (c.indexOf(nameEQ) === 0) {
       try {
         return decodeURIComponent(c.substring(nameEQ.length, c.length));
-      } catch (e) {
+      } catch {
         return c.substring(nameEQ.length, c.length);
       }
     }
@@ -32,312 +32,274 @@ const eraseCookie = (name: string) => {
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 };
 
+type AdminWritableEntity = Record<string, unknown> & { id?: string };
+type AdminCustomer = {
+  id: string;
+  level?: number;
+  balance?: number;
+  status?: string;
+};
+type AccountInfoPayload = Record<string, unknown>;
+
+const fetchJson = async (input: string, init: RequestInit = {}) => {
+  const token = isBrowser ? (getCookie("adminToken") || getCookie("clientToken")) : null;
+  const response = await fetch(input, {
+    ...init,
+    credentials: "include",
+    headers: {
+      ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      ...(init.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || "YÃªu cáº§u tháº¥t báº¡i");
+  }
+
+  if (response.status === 204) return null;
+  return response.json().catch(() => null);
+};
+
+const fetchAdminProfile = async () => {
+  const data = await fetchJson(`${API_URL}/users`, {
+    method: "GET",
+    headers: {},
+  });
+
+  const user = data?.user || null;
+  if (!user || user.role !== "admin") {
+    eraseCookie("adminUser");
+    throw new Error("TÃ i khoáº£n cá»§a báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang quáº£n trá»‹!");
+  }
+
+  setCookie("adminUser", JSON.stringify(user));
+  setCookie("clientUser", JSON.stringify(user));
+  return user;
+};
+
 export const adminApi = {
-  // Authentication
   login: async (email: string, password: string) => {
-    const res = await fetch(`${API_URL}/users/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+    await fetchJson(`${API_URL}/users/login`, {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.token && isBrowser) {
-        setCookie('adminToken', data.token);
-      }
-      
-      // Fetch profile immediately to store clean adminUser details in cookies
-      let user = data.user || data;
-      if (data.token) {
-        const profileRes = await fetch(`${API_URL}/users`, {
-          headers: { 'Authorization': `Bearer ${data.token}` }
-        });
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          user = profileData.user;
-          if (isBrowser && user) {
-            setCookie('adminUser', JSON.stringify(user));
-            setCookie('clientToken', data.token);
-            setCookie('clientUser', JSON.stringify(user));
-          }
-        }
-      }
-      return data;
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Sai tài khoản hoặc mật khẩu!");
+
+    const user = await fetchAdminProfile();
+    return { success: true, user };
   },
 
   checkAuth: () => {
     if (!isBrowser) return null;
-    const token = getCookie('adminToken');
-    const user = getCookie('adminUser');
-    if (token && user) {
-      try {
-        return JSON.parse(user);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  },
-
-  logout: () => {
-    if (isBrowser) {
-      eraseCookie('adminToken');
-      eraseCookie('adminUser');
-      eraseCookie('clientToken');
-      eraseCookie('clientUser');
+    const user = getCookie("adminUser");
+    if (!user) return null;
+    try {
+      return JSON.parse(user);
+    } catch {
+      return null;
     }
   },
 
-  // Games
+  logout: async () => {
+    try {
+      await fetchJson(`${API_URL}/users/logout`, {
+        method: "POST",
+        headers: {},
+      });
+    } catch {
+      // Ignore logout failures and clear local cache anyway.
+    }
+
+    eraseCookie("adminUser");
+    eraseCookie("clientUser");
+  },
+
   getGames: async () => {
-    const res = await fetch(`${API_URL}/games`);
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    return [];
+    const res = await fetch(`${API_URL}/games`, { credentials: "include" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data || data;
   },
 
-  saveGame: async (game: any) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
+  saveGame: async (game: AdminWritableEntity) => {
     const url = game.id ? `${API_URL}/games/${game.id}` : `${API_URL}/games`;
-    const method = game.id ? 'PUT' : 'POST';
-    const res = await fetch(url, {
+    const method = game.id ? "PUT" : "POST";
+    return fetchJson(url, {
       method,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(game)
+      body: JSON.stringify(game),
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Lưu game thất bại!");
   },
 
   deleteGame: async (id: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/games/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+    return fetchJson(`${API_URL}/games/${id}`, {
+      method: "DELETE",
+      headers: {},
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error("Xóa game thất bại!");
   },
 
-  // Packages
   getPackages: async () => {
-    const res = await fetch(`${API_URL}/toup-package`);
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    return [];
+    const res = await fetch(`${API_URL}/toup-package`, { credentials: "include" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data || data;
   },
 
-  savePackage: async (pkg: any) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
+  savePackage: async (pkg: AdminWritableEntity) => {
     const url = pkg.id ? `${API_URL}/toup-package/${pkg.id}` : `${API_URL}/toup-package`;
-    const method = pkg.id ? 'PUT' : 'POST';
-    const res = await fetch(url, {
+    const method = pkg.id ? "PUT" : "POST";
+    return fetchJson(url, {
       method,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(pkg)
+      body: JSON.stringify(pkg),
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.message || "Lưu gói nạp thất bại!");
   },
 
   deletePackage: async (id: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/toup-package/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+    return fetchJson(`${API_URL}/toup-package/${id}`, {
+      method: "DELETE",
+      headers: {},
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error("Xóa gói nạp thất bại!");
   },
 
-  // Orders
   getOrders: async () => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/order`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/order`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.orders || data;
-    }
-    return [];
+    return data?.orders || data || [];
   },
 
   updateOrderStatus: async (id: number, status: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/order/${id}/status`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ status })
-    });
-    if (res.ok) {
-      return await res.json();
+    if (status === "success") {
+      return fetchJson(`${API_URL}/order/${id}/complete`, {
+        method: "POST",
+        headers: {},
+      });
     }
-    throw new Error("Cập nhật trạng thái đơn thất bại!");
+
+    if (status === "cancelled") {
+      return fetchJson(`${API_URL}/order/cancel-refund/${id}`, {
+        method: "POST",
+        headers: {},
+      });
+    }
+
+    return fetchJson(`${API_URL}/order/change-status/${id}`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    });
   },
 
-  // Wallet Logs (Deposits)
   getWalletLogs: async () => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/toup-wallet-log`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/toup-wallet-log`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    return [];
+    return data?.data || data || [];
   },
 
   approveWalletLog: async (id: string, approve: boolean) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/toup-wallet-log/${id}/approve`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ approve })
+    return fetchJson(`${API_URL}/toup-wallet-log/manual-charge?id=${encodeURIComponent(id)}`, {
+      method: "POST",
+      body: JSON.stringify({ newStatus: approve ? "ThÃ nh CÃ´ng" : "ÄÃ£ Há»§y" }),
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error("Phê duyệt nạp tiền thất bại!");
   },
 
-  // Customers
   getCustomers: async () => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/users/all`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.users || data;
-    }
-    return [];
+    return data?.data || [];
   },
 
-  updateCustomer: async (customer: any) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/users/${customer.id}`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(customer)
+  updateCustomer: async (customer: AdminCustomer) => {
+    const original = await fetchJson(`${API_URL}/users/get-user?user_id=${encodeURIComponent(customer.id)}`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      return await res.json();
+
+    if (!original?.id) {
+      throw new Error("KhÃ´ng tÃ¬m tháº¥y khÃ¡ch hÃ ng");
     }
-    throw new Error("Cập nhật thông tin khách hàng thất bại!");
+
+    if (Number(customer.level) !== Number(original.level)) {
+      await fetchJson(`${API_URL}/users/${customer.id}/level`, {
+        method: "PUT",
+        body: JSON.stringify({ level: Number(customer.level) }),
+      });
+    }
+
+    if ((customer.status || "active") !== (original.status || "active")) {
+      await fetchJson(`${API_URL}/users/${customer.id}/toggle-lock`, {
+        method: "PATCH",
+        headers: {},
+      });
+    }
+
+    const originalBalance = Number(original.balance || 0);
+    const nextBalance = Number(customer.balance || 0);
+    if (nextBalance !== originalBalance) {
+      const delta = Math.abs(nextBalance - originalBalance);
+      await fetchJson(`${API_URL}/users/balance`, {
+        method: "PUT",
+        body: JSON.stringify({
+          userId: customer.id,
+          amount: delta,
+          type: nextBalance > originalBalance ? "credit" : "debit",
+        }),
+      });
+    }
+
+    return { success: true };
   },
 
-  // Accounts
   getAccounts: async (gameId: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/acc/game?game_id=${gameId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/acc/game?game_id=${encodeURIComponent(gameId)}`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    return { total: 0, data: { data: [] } };
+    return data || { total: 0, data: { data: [] } };
   },
 
   saveAccount: async (formData: FormData, id?: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
     const url = id ? `${API_URL}/acc/${id}` : `${API_URL}/acc`;
-    const method = id ? 'PUT' : 'POST';
-    const res = await fetch(url, {
+    const method = id ? "PUT" : "POST";
+    return fetchJson(url, {
       method,
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
+      body: formData,
+      headers: {},
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error("Lưu tài khoản game thất bại!");
   },
 
   deleteAccount: async (id: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/acc/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+    return fetchJson(`${API_URL}/acc/${id}`, {
+      method: "DELETE",
+      headers: {},
     });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error("Xóa tài khoản game thất bại!");
   },
 
   getAccountOrders: async () => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/accOrder`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/accOrder`, {
+      method: "GET",
+      headers: {},
     });
-    if (res.ok) {
-      const responseData = await res.json();
-      return responseData.data || responseData;
-    }
-    return [];
+    return data?.data || data || [];
   },
 
-  sendAccountInfo: async (orderId: string, accInfo: any) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/accOrder/${orderId}/send`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(accInfo)
+  sendAccountInfo: async (orderId: string, accInfo: AccountInfoPayload) => {
+    const data = await fetchJson(`${API_URL}/accOrder/${orderId}/send`, {
+      method: "PUT",
+      body: JSON.stringify(accInfo),
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    throw new Error("Gửi thông tin nick thất bại!");
+    return data?.data || data;
   },
 
   cancelAccountOrder: async (orderId: string) => {
-    const token = isBrowser ? getCookie('adminToken') : null;
-    const res = await fetch(`${API_URL}/accOrder/${orderId}/cancel`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await fetchJson(`${API_URL}/accOrder/${orderId}/cancel`, {
+      method: "PUT",
+      headers: {},
     });
-    if (res.ok) {
-      const data = await res.json();
-      return data.data || data;
-    }
-    throw new Error("Hủy đơn mua acc thất bại!");
-  }
+    return data?.data || data;
+  },
 };

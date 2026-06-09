@@ -6,6 +6,7 @@ const { orderLimiter } = require('../../middleware/rateLimit.middleware');
 
 router.post('/', orderLimiter, checkToken, OrderController.createOrder);
 router.get('/my-orders', checkToken, OrderController.getOrdersByUserId);
+router.get('/history', checkToken, OrderController.getOrdersByUserId);
 router.get('/user', checkToken, OrderController.getOrdersByUserId);
 router.put('/:id/cancel', checkToken, OrderController.cancelOrderIfPending);
 router.get('/transaction-history', checkToken, OrderController.getTransactionHistory);
@@ -15,7 +16,7 @@ router.get('/summary', checkToken, OrderController.getUserFinancialSummary);
 router.get('/receive/summary', checkToken, OrderController.getOrderSummary3);
 router.get('/mynap', checkToken, OrderController.getMyNapOrdersStats);
 router.get('/receive/stats', checkToken, OrderController.getMyNapOrdersStats);
-router.post('/:id/accept', checkToken, OrderController.acceptOrder);
+router.post('/:id/accept', checkRoleMDW, OrderController.acceptOrder);
 
 router.get('/', checkRoleMDW, OrderController.getAllOrders);
 router.get('/detail/:id', checkRoleMDW, OrderController.getOrderById);

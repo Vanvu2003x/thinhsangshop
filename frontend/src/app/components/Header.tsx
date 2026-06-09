@@ -87,7 +87,7 @@ export default function Header() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-main.png"
-              alt="Thịnh Sáng Shop"
+              alt="Shop Thịnh Sáng"
               className="relative z-10 h-full w-auto object-contain transition duration-300 group-hover:scale-105"
               onError={(event) => {
                 event.currentTarget.style.display = "none";
