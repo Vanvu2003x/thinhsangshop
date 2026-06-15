@@ -140,8 +140,8 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
       if (res.success) {
         setSuccessMsg(
           quantity > 1
-            ? `Táº¡o Ä‘Æ¡n hÃ ng x${quantity} thÃ nh cÃ´ng! Há»‡ thá»‘ng Ä‘ang xá»­ lÃ½.`
-            : "Táº¡o Ä‘Æ¡n hÃ ng náº¡p thÃ nh cÃ´ng! Há»‡ thá»‘ng Ä‘ang tá»± Ä‘á»™ng xá»­ lÃ½ Ä‘Æ¡n."
+            ? `Tạo đơn hàng x${quantity} thành công! Hệ thống đang xử lý.`
+            : "Tạo đơn hàng nạp thành công! Hệ thống đang tự động xử lý đơn."
         );
         const freshProfile = await clientApi.getProfile();
         setUserProfile(freshProfile);
@@ -149,7 +149,7 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
           router.push('/history');
         }, 1500);
       } else {
-        setErrorMsg(res.message || "Táº¡o Ä‘Æ¡n tháº¥t báº¡i.");
+        setErrorMsg(res.message || "Tạo đơn thất bại.");
       }
       return;
 

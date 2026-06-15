@@ -40,7 +40,7 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const calculateSalePrice = (cost: number, percent: number) => Math.ceil(Math.max(0, cost) * (1 + (percent / 100)));
+const calculateSalePrice = (cost: number, percent: number) => Math.ceil(Math.max(0, cost) * (1 + percent / 100));
 
 export default function PackageManagement() {
   const [games, setGames] = useState<AdminGame[]>([]);
@@ -66,10 +66,16 @@ export default function PackageManagement() {
   const previewPriceBasic = calculateSalePrice(originPrice, profitPercentBasic);
   const previewPricePro = calculateSalePrice(originPrice, profitPercentPro);
   const previewPricePlus = calculateSalePrice(originPrice, profitPercentPlus);
+
   const thumbnailPreview = useMemo(() => {
     if (!thumbnailFile) return thumbnail || "";
     return URL.createObjectURL(thumbnailFile);
   }, [thumbnail, thumbnailFile]);
+
+  useEffect(() => {
+    if (!thumbnailPreview.startsWith("blob:")) return undefined;
+    return () => URL.revokeObjectURL(thumbnailPreview);
+  }, [thumbnailPreview]);
 
   const loadData = async () => {
     setLoading(true);
@@ -89,30 +95,11 @@ export default function PackageManagement() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void (async () => {
-        setLoading(true);
-        try {
-          const [gameList, packageList] = await Promise.all([adminApi.getGames(), adminApi.getPackages()]);
-          setGames(gameList as AdminGame[]);
-          setPackages(packageList as AdminPackage[]);
-          if (gameList.length > 0) {
-            setSelectedGameId((current) => (current === "all" ? gameList[0].id : current));
-          }
-        } catch (error) {
-          console.error(error);
-        } finally {
-          setLoading(false);
-        }
-      })();
+      void loadData();
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
   }, []);
-
-  useEffect(() => {
-    if (!thumbnailPreview.startsWith("blob:")) return undefined;
-    return () => URL.revokeObjectURL(thumbnailPreview);
-  }, [thumbnailPreview]);
 
   const getGameDefaults = (targetGameId: string) => {
     const game = games.find((item) => item.id === targetGameId);
@@ -195,15 +182,15 @@ export default function PackageManagement() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Bạn có chắc muốn xóa gói nạp này?")) return;
+    await adminApi.deletePackage(id);
+    await loadData();
+  };
+
   const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     setThumbnailFile(file);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Ban co chac muon xoa goi nap nay?")) return;
-    await adminApi.deletePackage(id);
-    await loadData();
   };
 
   const filteredPackages = packages.filter((pkg) => {
@@ -227,7 +214,7 @@ export default function PackageManagement() {
             onChange={(event) => setSelectedGameId(event.target.value)}
             className="rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2 text-sm text-white outline-none transition focus:border-purple-500"
           >
-            <option value="all">Tat ca game</option>
+            <option value="all">Tất cả game</option>
             {games.map((game) => (
               <option key={game.id} value={game.id}>
                 {game.name}
@@ -241,7 +228,7 @@ export default function PackageManagement() {
             </span>
             <input
               type="text"
-              placeholder="Tim ten goi..."
+              placeholder="Tìm tên gói..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 py-2 pl-9 pr-4 text-sm text-white outline-none transition focus:border-purple-500"
@@ -254,7 +241,7 @@ export default function PackageManagement() {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/10 transition active:scale-95 md:w-auto"
         >
           <Plus className="h-4.5 w-4.5" />
-          Them goi nap moi
+          Thêm gói nạp mới
         </button>
       </div>
 
@@ -268,19 +255,19 @@ export default function PackageManagement() {
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-white/5 bg-[#0f172a]/30 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  <th className="px-6 py-4">Ten goi nap</th>
-                  <th className="px-6 py-4">Loai / ID API</th>
-                  <th className="px-6 py-4">Gia API / Von</th>
-                  <th className="px-6 py-4">Gia ban</th>
-                  <th className="px-6 py-4">Trang thai</th>
-                  <th className="px-6 py-4 text-right">Thao tac</th>
+                  <th className="px-6 py-4">Tên gói nạp</th>
+                  <th className="px-6 py-4">Loại / ID API</th>
+                  <th className="px-6 py-4">Giá API / Vốn</th>
+                  <th className="px-6 py-4">Giá bán</th>
+                  <th className="px-6 py-4">Trạng thái</th>
+                  <th className="px-6 py-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-zinc-200">
                 {filteredPackages.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-zinc-500">
-                      Khong tim thay goi nap nao.
+                      Không tìm thấy gói nạp nào.
                     </td>
                   </tr>
                 ) : (
@@ -314,25 +301,21 @@ export default function PackageManagement() {
 
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1 font-mono text-xs">
-                            <span className="font-semibold text-zinc-200">
-                              Von: {toNumber(pkg.origin_price).toLocaleString("vi-VN")}d
-                            </span>
-                            <span className="text-zinc-500">
-                              API: {toNumber(pkg.api_price).toLocaleString("vi-VN")}d
-                            </span>
+                            <span className="font-semibold text-zinc-200">Vốn: {toNumber(pkg.origin_price).toLocaleString("vi-VN")}đ</span>
+                            <span className="text-zinc-500">API: {toNumber(pkg.api_price).toLocaleString("vi-VN")}đ</span>
                           </div>
                         </td>
 
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1 text-xs">
                             <span className="font-bold text-purple-400">
-                              Basic: {toNumber(pkg.price_basic || pkg.price).toLocaleString("vi-VN")}d
+                              Basic: {toNumber(pkg.price_basic || pkg.price).toLocaleString("vi-VN")}đ
                             </span>
                             <span className="font-semibold text-cyan-400">
-                              Pro: {toNumber(pkg.price_pro || pkg.price).toLocaleString("vi-VN")}d
+                              Pro: {toNumber(pkg.price_pro || pkg.price).toLocaleString("vi-VN")}đ
                             </span>
                             <span className="font-semibold text-emerald-400">
-                              Plus: {toNumber(pkg.price_plus || pkg.price).toLocaleString("vi-VN")}d
+                              Plus: {toNumber(pkg.price_plus || pkg.price).toLocaleString("vi-VN")}đ
                             </span>
                           </div>
                         </td>
@@ -379,9 +362,7 @@ export default function PackageManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
             <div className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/40 px-6 py-4">
-              <h3 className="text-base font-bold text-white">
-                {editingPkg.id ? "Chinh sua goi nap" : "Them goi nap moi"}
-              </h3>
+              <h3 className="text-base font-bold text-white">{editingPkg.id ? "Chỉnh sửa gói nạp" : "Thêm gói nạp mới"}</h3>
               <button onClick={() => setEditingPkg(null)} className="text-zinc-400 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
@@ -390,14 +371,14 @@ export default function PackageManagement() {
             <form onSubmit={handleSave} className="space-y-4 p-6">
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Ten goi nap
+                  Tên gói nạp
                 </label>
                 <input
                   type="text"
                   value={packageName}
                   onChange={(event) => setPackageName(event.target.value)}
                   required
-                  placeholder="Vi du: 86 Diamonds"
+                  placeholder="Ví dụ: 86 Diamonds"
                   className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
                 />
               </div>
@@ -405,7 +386,7 @@ export default function PackageManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Chon game
+                    Chọn game
                   </label>
                   <select
                     value={gameId}
@@ -428,14 +409,14 @@ export default function PackageManagement() {
 
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Loai goi
+                    Loại gói
                   </label>
                   <input
                     type="text"
                     value={packageType}
                     onChange={(event) => setPackageType(event.target.value)}
                     required
-                    placeholder="Vi du: Diamonds, Pass"
+                    placeholder="Ví dụ: Diamonds, Pass"
                     className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
                   />
                 </div>
@@ -444,21 +425,21 @@ export default function PackageManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    ID goi API
+                    ID gói API
                   </label>
                   <input
                     type="text"
                     value={apiId}
                     onChange={(event) => setApiId(event.target.value)}
                     required
-                    placeholder="Vi du: 10"
+                    placeholder="Ví dụ: 10"
                     className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 font-mono text-sm text-white outline-none transition focus:border-purple-500"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Trang thai
+                    Trạng thái
                   </label>
                   <select
                     value={status}
@@ -473,7 +454,7 @@ export default function PackageManagement() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Anh goi nap
+                  Ảnh gói nạp
                 </label>
                 <div className="relative rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5">
                   <input
@@ -492,7 +473,7 @@ export default function PackageManagement() {
                       />
                       <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-300">
                         <Upload className="h-3 w-3" />
-                        Thay doi anh
+                        Thay đổi ảnh
                       </div>
                     </div>
                   ) : (
@@ -500,26 +481,24 @@ export default function PackageManagement() {
                       <div className="mb-2 inline-block rounded-full border border-white/5 bg-[#0f172a]/60 p-3">
                         <ImageIcon className="h-6 w-6 text-zinc-400" />
                       </div>
-                      <div className="text-sm font-semibold text-zinc-300">Click de chon anh goi nap</div>
+                      <div className="text-sm font-semibold text-zinc-300">Click để chọn ảnh gói nạp</div>
                       <p className="mt-1 text-xs text-zinc-500">PNG, JPG, GIF, WEBP</p>
                     </div>
                   )}
                 </div>
-                {!thumbnailFile && thumbnail ? (
-                  <p className="mt-2 text-xs text-zinc-500">Dang dung anh hien tai tren server.</p>
-                ) : null}
+                {!thumbnailFile && thumbnail ? <p className="mt-2 text-xs text-zinc-500">Đang dùng ảnh hiện tại trên server.</p> : null}
               </div>
 
               <div className="my-4 border-t border-white/5 pt-4">
                 <h4 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-300">
                   <DollarSign className="h-4 w-4 text-purple-400" />
-                  Cau hinh gia nhap va gia ban
+                  Cấu hình giá nhập và giá bán
                 </h4>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      Gia API
+                      Giá API
                     </label>
                     <div className="relative">
                       <input
@@ -535,13 +514,13 @@ export default function PackageManagement() {
                         min="0"
                         className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 py-2.5 pl-4 pr-9 font-mono text-sm text-white outline-none transition focus:border-purple-500"
                       />
-                      <span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-zinc-500">d</span>
+                      <span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-zinc-500">đ</span>
                     </div>
                   </div>
 
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      Gia von
+                      Giá vốn
                     </label>
                     <div className="relative">
                       <input
@@ -552,7 +531,7 @@ export default function PackageManagement() {
                         min="0"
                         className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 py-2.5 pl-4 pr-9 font-mono text-sm font-bold text-white outline-none transition focus:border-purple-500"
                       />
-                      <span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-zinc-500">d</span>
+                      <span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-zinc-500">đ</span>
                     </div>
                   </div>
                 </div>
@@ -568,9 +547,7 @@ export default function PackageManagement() {
                       onChange={(event) => setProfitPercentBasic(toNumber(event.target.value))}
                       className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-3 py-2 font-mono text-xs font-bold text-white outline-none transition focus:border-purple-500"
                     />
-                    <p className="mt-2 text-[11px] font-semibold text-purple-400">
-                      Gia ban: {previewPriceBasic.toLocaleString("vi-VN")}d
-                    </p>
+                    <p className="mt-2 text-[11px] font-semibold text-purple-400">Giá bán: {previewPriceBasic.toLocaleString("vi-VN")}đ</p>
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-[#0f172a]/40 p-3">
@@ -583,9 +560,7 @@ export default function PackageManagement() {
                       onChange={(event) => setProfitPercentPro(toNumber(event.target.value))}
                       className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-3 py-2 font-mono text-xs font-semibold text-white outline-none transition focus:border-purple-500"
                     />
-                    <p className="mt-2 text-[11px] font-semibold text-cyan-400">
-                      Gia ban: {previewPricePro.toLocaleString("vi-VN")}d
-                    </p>
+                    <p className="mt-2 text-[11px] font-semibold text-cyan-400">Giá bán: {previewPricePro.toLocaleString("vi-VN")}đ</p>
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-[#0f172a]/40 p-3">
@@ -598,9 +573,7 @@ export default function PackageManagement() {
                       onChange={(event) => setProfitPercentPlus(toNumber(event.target.value))}
                       className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-3 py-2 font-mono text-xs font-semibold text-white outline-none transition focus:border-purple-500"
                     />
-                    <p className="mt-2 text-[11px] font-semibold text-emerald-400">
-                      Gia ban: {previewPricePlus.toLocaleString("vi-VN")}d
-                    </p>
+                    <p className="mt-2 text-[11px] font-semibold text-emerald-400">Giá bán: {previewPricePlus.toLocaleString("vi-VN")}đ</p>
                   </div>
                 </div>
               </div>
@@ -611,13 +584,13 @@ export default function PackageManagement() {
                   onClick={() => setEditingPkg(null)}
                   className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10"
                 >
-                  Huy bo
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-cyan-500"
                 >
-                  Luu goi nap
+                  Lưu gói nạp
                 </button>
               </div>
             </form>

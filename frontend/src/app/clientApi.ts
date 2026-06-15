@@ -103,7 +103,7 @@ const fetchJson = async (input: string, init: RequestInit = {}) => {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    const error = new Error(errData.message || "YÃªu cáº§u tháº¥t báº¡i");
+    const error = new Error(errData.message || "Yêu cầu thất bại");
     (error as Error & { status?: number }).status = response.status;
     throw error;
   }
@@ -206,7 +206,7 @@ export const clientApi = {
 
     return {
       success: true,
-      message: "Táº¡o Ä‘Æ¡n hÃ ng thÃ nh cÃ´ng!",
+      message: "Tạo đơn hàng thành công!",
       order: data,
     };
   },

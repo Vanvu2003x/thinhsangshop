@@ -146,7 +146,7 @@ export default function HistoryPage() {
                             {Number(order.amount).toLocaleString('vi-VN')}đ
                             {Number(order.quantity || 1) > 1 ? (
                               <div className="mt-1 text-[10px] font-semibold text-zinc-500">
-                                Sá»‘ lÆ°á»£ng: x{Number(order.quantity)}
+                                Số lượng: x{Number(order.quantity)}
                               </div>
                             ) : null}
                           </td>

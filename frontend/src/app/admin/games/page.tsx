@@ -28,6 +28,16 @@ export default function GameManagement() {
   const [thumbnail, setThumbnail] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
 
+  const preview = useMemo(() => {
+    if (!thumbnailFile) return thumbnail || "";
+    return URL.createObjectURL(thumbnailFile);
+  }, [thumbnail, thumbnailFile]);
+
+  useEffect(() => {
+    if (!preview.startsWith("blob:")) return undefined;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
   const loadGames = async () => {
     setLoading(true);
     try {
@@ -48,23 +58,11 @@ export default function GameManagement() {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
-  const preview = useMemo(() => {
-    if (!thumbnailFile) return thumbnail || "";
-    return URL.createObjectURL(thumbnailFile);
-  }, [thumbnail, thumbnailFile]);
-
-  useEffect(() => {
-    if (!preview.startsWith("blob:")) return undefined;
-    return () => URL.revokeObjectURL(preview);
-  }, [preview]);
-
   const filteredGames = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return games;
 
-    return games.filter((game) => {
-      return game.name.toLowerCase().includes(keyword) || game.gamecode.toLowerCase().includes(keyword);
-    });
+    return games.filter((game) => game.name.toLowerCase().includes(keyword) || game.gamecode.toLowerCase().includes(keyword));
   }, [games, search]);
 
   const handleSync = async () => {
@@ -116,7 +114,7 @@ export default function GameManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Ban co chac chan muon xoa game nay?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa game này?")) return;
     await adminApi.deleteGame(id);
     await loadGames();
   };
@@ -130,7 +128,7 @@ export default function GameManagement() {
           </span>
           <input
             type="text"
-            placeholder="Tim kiem game..."
+            placeholder="Tìm kiếm game..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 py-2 pl-9 pr-4 text-sm text-white outline-none transition focus:border-purple-500"
@@ -143,7 +141,7 @@ export default function GameManagement() {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/10 transition active:scale-95 disabled:opacity-50 sm:w-auto"
         >
           <RefreshCw className={`h-4.5 w-4.5 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Dang dong bo..." : "Dong bo game tu Partner API"}
+          {syncing ? "Đang đồng bộ..." : "Đồng bộ game từ Partner API"}
         </button>
       </div>
 
@@ -174,7 +172,7 @@ export default function GameManagement() {
                         : "border border-rose-500/20 bg-rose-500/20 text-rose-300"
                     }`}
                   >
-                    {game.status === "active" ? "Hoat dong" : "Tam dung"}
+                    {game.status === "active" ? "Hoạt động" : "Tạm dừng"}
                   </span>
                 </div>
               </div>
@@ -184,15 +182,15 @@ export default function GameManagement() {
                   <h4 className="text-lg font-bold text-white">{game.name}</h4>
                   <div className="mt-4 grid grid-cols-2 gap-2 border-b border-white/5 pb-4 text-xs text-zinc-400">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Ma Game</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Mã Game</p>
                       <p className="mt-0.5 font-mono text-zinc-300">{game.gamecode}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Nguon API</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Nguồn API</p>
                       <p className="mt-0.5 uppercase text-zinc-300">{game.api_source || "N/A"}</p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Cong API ID</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Cổng API ID</p>
                       <p className="mt-0.5 truncate font-mono text-zinc-300">{game.api_id || "N/A"}</p>
                     </div>
                   </div>
@@ -204,7 +202,7 @@ export default function GameManagement() {
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
                   >
                     <Edit className="h-3.5 w-3.5" />
-                    Chinh sua
+                    Chỉnh sửa
                   </button>
                   <button
                     onClick={() => handleDelete(game.id)}
@@ -223,7 +221,7 @@ export default function GameManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
             <div className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/40 px-6 py-4">
-              <h3 className="text-base font-bold text-white">Chinh sua thong tin Game</h3>
+              <h3 className="text-base font-bold text-white">Chỉnh sửa thông tin Game</h3>
               <button onClick={() => setEditingGame(null)} className="text-zinc-400 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
@@ -232,7 +230,7 @@ export default function GameManagement() {
             <form onSubmit={handleSave} className="space-y-4 p-6">
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Ten hien thi Game
+                  Tên hiển thị Game
                 </label>
                 <input
                   type="text"
@@ -245,23 +243,23 @@ export default function GameManagement() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Trang thai game
+                  Trạng thái game
                 </label>
                 <select
                   value={status}
                   onChange={(event) => setStatus(event.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
                 >
-                  <option value="active">Kich hoat (Active)</option>
-                  <option value="inactive">Tam dung (Inactive)</option>
+                  <option value="active">Kích hoạt (Active)</option>
+                  <option value="inactive">Tạm dừng (Inactive)</option>
                 </select>
               </div>
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Anh nen game
+                  Ảnh nền game
                 </label>
-                <div className="rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5">
+                <div className="relative rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5">
                   <input
                     type="file"
                     accept=".jpg,.jpeg,.png,.gif,.webp"
@@ -279,7 +277,7 @@ export default function GameManagement() {
                         />
                         <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-300">
                           <Upload className="h-3 w-3" />
-                          Thay doi anh
+                          Thay đổi ảnh
                         </div>
                       </div>
                     ) : (
@@ -287,15 +285,13 @@ export default function GameManagement() {
                         <div className="mb-2 inline-block rounded-full border border-white/5 bg-[#0f172a]/60 p-3">
                           <ImageIcon className="h-6 w-6 text-zinc-400" />
                         </div>
-                        <div className="text-sm font-semibold text-zinc-300">Click de chon anh game</div>
+                        <div className="text-sm font-semibold text-zinc-300">Click để chọn ảnh game</div>
                         <p className="mt-1 text-xs text-zinc-500">PNG, JPG, GIF, WEBP</p>
                       </div>
                     )}
                   </div>
                 </div>
-                {!thumbnailFile && thumbnail ? (
-                  <p className="mt-2 text-xs text-zinc-500">Dang dung anh hien tai tren server.</p>
-                ) : null}
+                {!thumbnailFile && thumbnail ? <p className="mt-2 text-xs text-zinc-500">Đang dùng ảnh hiện tại trên server.</p> : null}
               </div>
 
               <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
@@ -304,13 +300,13 @@ export default function GameManagement() {
                   onClick={() => setEditingGame(null)}
                   className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10"
                 >
-                  Huy bo
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   className="rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-cyan-500"
                 >
-                  Luu thay doi
+                  Lưu thay đổi
                 </button>
               </div>
             </form>

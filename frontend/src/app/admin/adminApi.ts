@@ -123,7 +123,7 @@ const fetchJson = async (input: string, init: RequestInit = {}) => {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || "YÃªu cáº§u tháº¥t báº¡i");
+    throw new Error(errData.message || "Yêu cầu thất bại");
   }
 
   if (response.status === 204) return null;
@@ -139,7 +139,7 @@ const fetchAdminProfile = async () => {
   const user = normalizeAdminSessionUser(data?.user || null);
   if (!user || user.role !== "admin") {
     eraseCookie("adminUser");
-    throw new Error("TÃ i khoáº£n cá»§a báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang quáº£n trá»‹!");
+    throw new Error("Tài khoản của bạn không có quyền truy cập trang quản trị!");
   }
 
   setCookie("adminUser", JSON.stringify(user));
@@ -309,7 +309,7 @@ export const adminApi = {
   approveWalletLog: async (id: string, approve: boolean) => {
     return fetchJson(`${API_URL}/toup-wallet-log/manual-charge?id=${encodeURIComponent(id)}`, {
       method: "POST",
-      body: JSON.stringify({ newStatus: approve ? "ThÃ nh CÃ´ng" : "ÄÃ£ Há»§y" }),
+      body: JSON.stringify({ newStatus: approve ? "Thành Công" : "Đã Hủy" }),
     });
   },
 
@@ -328,7 +328,7 @@ export const adminApi = {
     });
 
     if (!original?.id) {
-      throw new Error("KhÃ´ng tÃ¬m tháº¥y khÃ¡ch hÃ ng");
+      throw new Error("Không tìm thấy khách hàng");
     }
 
     if (Number(customer.level) !== Number(original.level)) {
