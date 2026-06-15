@@ -149,7 +149,8 @@ const GameService = {
                 const percentBasic = game.profit_percent_basic || 0;
                 const percentPro = game.profit_percent_pro || 0;
                 const percentPlus = game.profit_percent_plus || 0;
-                const markupCoefficient = game.origin_markup_percent || 1;
+                const markupPercent = Number(game.origin_markup_percent || 0);
+                const markupCoefficient = 1 + (markupPercent / 100);
 
                 const packages = await tx.select().from(topupPackages).where(eq(topupPackages.game_id, id));
 

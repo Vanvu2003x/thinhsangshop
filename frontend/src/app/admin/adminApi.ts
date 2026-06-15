@@ -37,7 +37,12 @@ const clearLegacyAuthCookies = () => {
   eraseCookie("clientToken");
 };
 
-const normalizeAdminSessionUser = (user: any) => {
+type NormalizedAdminSessionUser = (Record<string, unknown> & {
+  role?: string;
+  balance: number;
+}) | null;
+
+const normalizeAdminSessionUser = (user: Record<string, unknown> | null): NormalizedAdminSessionUser => {
   if (!user) return user;
   return {
     ...user,
@@ -78,6 +83,19 @@ type AdminPackage = {
   thumbnail?: string;
   status?: string;
   [key: string]: unknown;
+};
+
+const appendFormValue = (formData: FormData, key: string, value: unknown) => {
+  if (value === undefined || value === null) return;
+  if (value instanceof File) {
+    formData.append(key, value);
+    return;
+  }
+  if (typeof value === "boolean") {
+    formData.append(key, value ? "true" : "false");
+    return;
+  }
+  formData.append(key, String(value));
 };
 
 const pickArray = <T = unknown>(data: unknown, keys: string[] = ["data"]): T[] => {
@@ -175,16 +193,26 @@ export const adminApi = {
   },
 
   saveGame: async (game: AdminWritableEntity) => {
-    const url = game.id ? `${API_URL}/games/${game.id}` : `${API_URL}/games`;
-    const method = game.id ? "PUT" : "POST";
+    const formData = new FormData();
+    const file = game.thumbnailFile;
+    const gameInfo = { ...game };
+    delete gameInfo.thumbnailFile;
+
+    formData.append("info", JSON.stringify(gameInfo));
+    if (file instanceof File) {
+      formData.append("thumbnail", file);
+    }
+
+    const url = game.id ? `${API_URL}/games/update?id=${encodeURIComponent(String(game.id))}` : `${API_URL}/games/upload`;
+    const method = game.id ? "PATCH" : "POST";
     return fetchJson(url, {
       method,
-      body: JSON.stringify(game),
+      body: formData,
     });
   },
 
   deleteGame: async (id: string) => {
-    return fetchJson(`${API_URL}/games/${id}`, {
+    return fetchJson(`${API_URL}/games/delete?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: {},
     });
@@ -198,11 +226,23 @@ export const adminApi = {
   },
 
   savePackage: async (pkg: AdminWritableEntity) => {
-    const url = pkg.id ? `${API_URL}/toup-package/${pkg.id}` : `${API_URL}/toup-package`;
+    const formData = new FormData();
+    const file = pkg.thumbnailFile;
+
+    Object.entries(pkg).forEach(([key, value]) => {
+      if (key === "thumbnailFile") return;
+      appendFormValue(formData, key, value);
+    });
+
+    if (file instanceof File) {
+      formData.append("thumbnail", file);
+    }
+
+    const url = pkg.id ? `${API_URL}/toup-package?id=${encodeURIComponent(String(pkg.id))}` : `${API_URL}/toup-package`;
     const method = pkg.id ? "PUT" : "POST";
     return fetchJson(url, {
       method,
-      body: JSON.stringify(pkg),
+      body: formData,
     });
   },
 

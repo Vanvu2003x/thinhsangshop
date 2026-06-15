@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 xl:pl-64 min-h-screen flex flex-col">
+      <div className="flex-1 xl:pl-64 min-h-screen flex flex-col min-w-0 overflow-x-hidden">
         {/* Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/5 bg-[#1e293b]/30 px-4 backdrop-blur-md sm:px-6">
           <div className="flex items-center gap-4">
@@ -181,7 +181,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Child Pages Container */}
-        <main className="relative flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="relative flex-1 overflow-y-auto p-4 sm:p-6 min-w-0 w-full">
           {children}
         </main>
       </div>

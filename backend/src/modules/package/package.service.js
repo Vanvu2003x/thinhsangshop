@@ -100,7 +100,10 @@ const PackageService = {
         const [game] = await db.select().from(games).where(eq(games.id, data.game_id));
         if (!game) throw { status: 404, message: "Game not found" };
 
-        const originPrice = parseInt(data.origin_price || 0);
+        const apiPrice = data.api_price !== undefined && data.api_price !== null && data.api_price !== ""
+            ? parseInt(data.api_price, 10)
+            : null;
+        const originPrice = parseInt(data.origin_price ?? data.api_price ?? 0, 10);
 
         const percentBasic = data.profit_percent_basic !== undefined ? Number(data.profit_percent_basic) : (game.profit_percent_basic || 0);
         const percentPro = data.profit_percent_pro !== undefined ? Number(data.profit_percent_pro) : (game.profit_percent_pro || 0);
@@ -121,6 +124,7 @@ const PackageService = {
         const newPackage = {
             id: crypto.randomUUID(),
             api_id: data.api_id, // Store external ID
+            api_price: apiPrice,
             package_name: data.package_name,
             game_id: data.game_id,
             origin_price: originPrice,
@@ -166,12 +170,20 @@ const PackageService = {
         const currentPkg = await PackageService.getPackageById(id, true);
         if (!currentPkg) throw { status: 404, message: "Gói không tồn tại" };
 
-        const [game] = await db.select().from(games).where(eq(games.id, currentPkg.game_id));
+        const targetGameId = data.game_id !== undefined ? data.game_id : currentPkg.game_id;
+
+        const [game] = await db.select().from(games).where(eq(games.id, targetGameId));
         if (!game) throw { status: 404, message: "Game associated with this package not found" };
 
         const updateData = {};
         if (data.package_name !== undefined) updateData.package_name = data.package_name;
+        if (data.game_id !== undefined) updateData.game_id = data.game_id;
         if (data.api_id !== undefined) updateData.api_id = data.api_id;
+        if (data.api_price !== undefined) {
+            updateData.api_price = data.api_price === null || data.api_price === ""
+                ? null
+                : parseInt(data.api_price, 10);
+        }
         if (data.package_type !== undefined) updateData.package_type = data.package_type;
         if (data.id_server !== undefined) updateData.id_server = data.id_server;
         if (data.sale !== undefined) updateData.sale = data.sale;
@@ -186,7 +198,9 @@ const PackageService = {
             }
         }
 
-        const originPrice = data.origin_price !== undefined ? parseInt(data.origin_price) : currentPkg.origin_price;
+        const originPrice = data.origin_price !== undefined
+            ? parseInt(data.origin_price, 10)
+            : currentPkg.origin_price;
 
         const percentBasic = data.profit_percent_basic !== undefined ? Number(data.profit_percent_basic)
             : (currentPkg.profit_percent_basic !== null ? currentPkg.profit_percent_basic : (game.profit_percent_basic || 0));

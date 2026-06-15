@@ -1,180 +1,216 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { adminApi } from '../adminApi';
-import { Gamepad2, Edit, Check, X, RefreshCw, Plus, Search, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import { Edit, ImageIcon, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
+import { adminApi } from "../adminApi";
+
+type AdminGame = {
+  id: string;
+  name: string;
+  gamecode: string;
+  thumbnail?: string;
+  status?: string;
+  api_source?: string;
+  api_id?: string;
+};
+
+const fallbackThumbnail = "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80";
 
 export default function GameManagement() {
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<AdminGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [search, setSearch] = useState('');
-  
-  // Modals / Edit state
-  const [editingGame, setEditingGame] = useState<any>(null);
-  const [name, setName] = useState('');
-  const [markupPercent, setMarkupPercent] = useState(0);
-  const [thumbnail, setThumbnail] = useState('');
-  const [status, setStatus] = useState('active');
+  const [search, setSearch] = useState("");
+
+  const [editingGame, setEditingGame] = useState<AdminGame | null>(null);
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState("active");
+  const [thumbnail, setThumbnail] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
 
   const loadGames = async () => {
     setLoading(true);
     try {
       const list = await adminApi.getGames();
-      setGames(list);
-    } catch (e) {
-      console.error(e);
+      setGames(list as AdminGame[]);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadGames();
+    const timeoutId = window.setTimeout(() => {
+      void loadGames();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
+
+  const preview = useMemo(() => {
+    if (!thumbnailFile) return thumbnail || "";
+    return URL.createObjectURL(thumbnailFile);
+  }, [thumbnail, thumbnailFile]);
+
+  useEffect(() => {
+    if (!preview.startsWith("blob:")) return undefined;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  const filteredGames = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return games;
+
+    return games.filter((game) => {
+      return game.name.toLowerCase().includes(keyword) || game.gamecode.toLowerCase().includes(keyword);
+    });
+  }, [games, search]);
 
   const handleSync = async () => {
     setSyncing(true);
-    // Simulate API Sync with Partner API
-    setTimeout(async () => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api"}/games/sync-nguona`, {
+        method: "POST",
+        credentials: "include",
+      });
       await loadGames();
+    } catch (error) {
+      console.error(error);
+    } finally {
       setSyncing(false);
-    }, 1500);
+    }
   };
 
-  const handleEdit = (game: any) => {
+  const handleEdit = (game: AdminGame) => {
     setEditingGame(game);
     setName(game.name);
-    setMarkupPercent(game.origin_markup_percent || 0);
-    setThumbnail(game.thumbnail || '');
-    setStatus(game.status || 'active');
+    setStatus(game.status || "active");
+    setThumbnail(game.thumbnail || "");
+    setThumbnailFile(null);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setThumbnailFile(file);
+  };
+
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!editingGame) return;
 
-    const updated = {
+    const payload = {
       ...editingGame,
       name,
-      origin_markup_percent: Number(markupPercent),
+      status,
       thumbnail,
-      status
+      thumbnailFile,
     };
 
-    const res = await adminApi.saveGame(updated);
-    if (res.success) {
+    const response = await adminApi.saveGame(payload);
+    if (response) {
       setEditingGame(null);
-      loadGames();
+      setThumbnailFile(null);
+      await loadGames();
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa game này? Tất cả gói nạp của game cũng sẽ bị ảnh hưởng.")) {
-      await adminApi.deleteGame(id);
-      loadGames();
-    }
+    if (!confirm("Ban co chac chan muon xoa game nay?")) return;
+    await adminApi.deleteGame(id);
+    await loadGames();
   };
-
-  const filteredGames = games.filter(g => 
-    g.name.toLowerCase().includes(search.toLowerCase()) || 
-    g.gamecode.toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <div className="space-y-6">
-      {/* Top action bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#1e293b]/40 backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-lg">
+      <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-white/5 bg-[#1e293b]/40 p-4 shadow-lg backdrop-blur-md sm:flex-row">
         <div className="relative w-full sm:max-w-xs">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-500">
-            <Search className="w-4 h-4" />
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
+            <Search className="h-4 w-4" />
           </span>
           <input
             type="text"
-            placeholder="Tìm kiếm game..."
+            placeholder="Tim kiem game..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#0f172a]/50 pl-9 pr-4 py-2 text-sm rounded-xl border border-white/10 outline-none focus:border-purple-500 transition text-white"
+            onChange={(event) => setSearch(event.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 py-2 pl-9 pr-4 text-sm text-white outline-none transition focus:border-purple-500"
           />
         </div>
 
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 px-5 py-2.5 rounded-xl font-semibold text-sm text-white shadow-lg shadow-purple-500/10 transition transform active:scale-95 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/10 transition active:scale-95 disabled:opacity-50 sm:w-auto"
         >
-          <RefreshCw className={`w-4.5 h-4.5 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Đang đồng bộ...' : 'Đồng bộ Game từ Partner API'}
+          <RefreshCw className={`h-4.5 w-4.5 ${syncing ? "animate-spin" : ""}`} />
+          {syncing ? "Dang dong bo..." : "Dong bo game tu Partner API"}
         </button>
       </div>
 
       {loading ? (
         <div className="flex h-64 items-center justify-center text-zinc-400">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
         </div>
       ) : (
-        /* Games Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredGames.map((game) => (
-            <div 
-              key={game.id} 
-              className="bg-[#1e293b]/40 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden shadow-xl hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between group"
+            <div
+              key={game.id}
+              className="flex flex-col justify-between overflow-hidden rounded-2xl border border-white/5 bg-[#1e293b]/40 shadow-xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1"
             >
-              {/* Background cover image */}
-              <div className="h-40 relative bg-zinc-800">
+              <div className="relative h-40 bg-zinc-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                  src={game.thumbnail || "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80"} 
+                <img
+                  src={game.thumbnail || fallbackThumbnail}
                   alt={game.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-75"
+                  className="h-full w-full object-cover brightness-75 transition-transform duration-700 hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent"></div>
-                <div className="absolute top-3 right-3">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    game.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/20 text-rose-400 border border-rose-500/20'
-                  }`}>
-                    {game.status === 'active' ? 'Hoạt động' : 'Tạm dừng'}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent" />
+                <div className="absolute right-3 top-3">
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      game.status === "active"
+                        ? "border border-emerald-500/20 bg-emerald-500/20 text-emerald-300"
+                        : "border border-rose-500/20 bg-rose-500/20 text-rose-300"
+                    }`}
+                  >
+                    {game.status === "active" ? "Hoat dong" : "Tam dung"}
                   </span>
                 </div>
               </div>
 
-              {/* Game details */}
-              <div className="p-5 flex-1 flex flex-col justify-between">
+              <div className="flex flex-1 flex-col justify-between p-5">
                 <div>
-                  <h4 className="font-bold text-lg text-white group-hover:text-purple-400 transition duration-300">{game.name}</h4>
-                  <div className="grid grid-cols-2 gap-2 mt-4 text-xs text-zinc-400 border-b border-white/5 pb-4 mb-4">
+                  <h4 className="text-lg font-bold text-white">{game.name}</h4>
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-b border-white/5 pb-4 text-xs text-zinc-400">
                     <div>
-                      <p className="font-semibold uppercase tracking-wider text-[10px] text-zinc-500">Mã Game</p>
-                      <p className="text-zinc-300 mt-0.5 font-mono">{game.gamecode}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Ma Game</p>
+                      <p className="mt-0.5 font-mono text-zinc-300">{game.gamecode}</p>
                     </div>
                     <div>
-                      <p className="font-semibold uppercase tracking-wider text-[10px] text-zinc-500">Nguồn API</p>
-                      <p className="text-zinc-300 mt-0.5 uppercase">{game.api_source}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Nguon API</p>
+                      <p className="mt-0.5 uppercase text-zinc-300">{game.api_source || "N/A"}</p>
                     </div>
-                    <div>
-                      <p className="font-semibold uppercase tracking-wider text-[10px] text-zinc-500">Gốc tăng thêm (%)</p>
-                      <p className="text-purple-400 font-bold mt-0.5">+{game.origin_markup_percent || 0}%</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold uppercase tracking-wider text-[10px] text-zinc-500">Cổng API ID</p>
-                      <p className="text-zinc-300 mt-0.5 font-mono truncate">{game.api_id || 'N/A'}</p>
+                    <div className="col-span-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Cong API ID</p>
+                      <p className="mt-0.5 truncate font-mono text-zinc-300">{game.api_id || "N/A"}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button 
+                <div className="mt-4 flex gap-2">
+                  <button
                     onClick={() => handleEdit(game)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-2 rounded-xl text-xs font-semibold transition"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-semibold text-white transition hover:bg-white/10"
                   >
-                    <Edit className="w-3.5 h-3.5" />
-                    Chỉnh sửa
+                    <Edit className="h-3.5 w-3.5" />
+                    Chinh sua
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDelete(game.id)}
-                    className="p-2 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 rounded-xl text-rose-400 transition"
+                    className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-2 text-rose-400 transition hover:bg-rose-500/20"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -183,81 +219,98 @@ export default function GameManagement() {
         </div>
       )}
 
-      {/* Edit Game Modal */}
       {editingGame && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-scaleUp">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-white/5 bg-[#0f172a]/40 flex justify-between items-center">
-              <h3 className="font-bold text-base text-white">Chỉnh sửa thông tin Game</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/40 px-6 py-4">
+              <h3 className="text-base font-bold text-white">Chinh sua thong tin Game</h3>
               <button onClick={() => setEditingGame(null)} className="text-zinc-400 hover:text-white">
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Modal Form */}
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} className="space-y-4 p-6">
               <div>
-                <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Tên hiển thị Game</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Ten hien thi Game
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
                   required
-                  className="w-full bg-[#0f172a]/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-purple-500 transition"
+                  className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Phần trăm tăng bán lẻ (%)</label>
-                  <input 
-                    type="number" 
-                    value={markupPercent} 
-                    onChange={(e) => setMarkupPercent(Number(e.target.value))} 
-                    required
-                    min="0"
-                    max="100"
-                    className="w-full bg-[#0f172a]/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-purple-500 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Trạng thái game</label>
-                  <select 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full bg-[#0f172a]/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-purple-500 transition"
-                  >
-                    <option value="active">Kích hoạt (Active)</option>
-                    <option value="inactive">Tạm dừng (Inactive)</option>
-                  </select>
-                </div>
               </div>
 
               <div>
-                <label className="block text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Đường dẫn ảnh nền Game (URL)</label>
-                <input 
-                  type="text" 
-                  value={thumbnail} 
-                  onChange={(e) => setThumbnail(e.target.value)} 
-                  className="w-full bg-[#0f172a]/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-purple-500 transition font-mono"
-                />
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Trang thai game
+                </label>
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
+                >
+                  <option value="active">Kich hoat (Active)</option>
+                  <option value="inactive">Tam dung (Inactive)</option>
+                </select>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 justify-end pt-4 border-t border-white/5 mt-6">
-                <button 
-                  type="button" 
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Anh nen game
+                </label>
+                <div className="rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5">
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                  <div className="relative">
+                    {preview ? (
+                      <div className="inline-block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={preview}
+                          alt="Game preview"
+                          className="mx-auto max-h-40 rounded-lg border border-white/10 bg-[#0f172a] object-contain p-1"
+                        />
+                        <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-300">
+                          <Upload className="h-3 w-3" />
+                          Thay doi anh
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-zinc-500">
+                        <div className="mb-2 inline-block rounded-full border border-white/5 bg-[#0f172a]/60 p-3">
+                          <ImageIcon className="h-6 w-6 text-zinc-400" />
+                        </div>
+                        <div className="text-sm font-semibold text-zinc-300">Click de chon anh game</div>
+                        <p className="mt-1 text-xs text-zinc-500">PNG, JPG, GIF, WEBP</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {!thumbnailFile && thumbnail ? (
+                  <p className="mt-2 text-xs text-zinc-500">Dang dung anh hien tai tren server.</p>
+                ) : null}
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
+                <button
+                  type="button"
                   onClick={() => setEditingGame(null)}
-                  className="px-5 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-300 font-semibold rounded-xl text-sm transition"
+                  className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10"
                 >
-                  Hủy bỏ
+                  Huy bo
                 </button>
-                <button 
+                <button
                   type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold rounded-xl text-sm transition"
+                  className="rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-cyan-500"
                 >
-                  Lưu thay đổi
+                  Luu thay doi
                 </button>
               </div>
             </form>
