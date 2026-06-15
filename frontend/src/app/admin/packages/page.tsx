@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { DollarSign, Edit, ImageIcon, Package, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, DollarSign, Edit, ImageIcon, Package, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { adminApi } from "../adminApi";
 import { resolvePackageThumbnail } from "../../packageArt";
 
@@ -32,8 +32,19 @@ type AdminPackage = {
   status?: string;
 };
 
+type Notice = {
+  tone: "success" | "error" | "info";
+  message: string;
+};
+
 const DEFAULT_STATUS = "active";
 const DEFAULT_TYPE = "Diamonds";
+
+const noticeStyles: Record<Notice["tone"], string> = {
+  success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+  error: "border-rose-500/20 bg-rose-500/10 text-rose-300",
+  info: "border-cyan-500/20 bg-cyan-500/10 text-cyan-300",
+};
 
 const toNumber = (value: unknown) => {
   const parsed = Number(value);
@@ -46,8 +57,10 @@ export default function PackageManagement() {
   const [games, setGames] = useState<AdminGame[]>([]);
   const [packages, setPackages] = useState<AdminPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   const [editingPkg, setEditingPkg] = useState<AdminPackage | null>(null);
   const [packageName, setPackageName] = useState("");
@@ -62,6 +75,9 @@ export default function PackageManagement() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [packageType, setPackageType] = useState(DEFAULT_TYPE);
   const [status, setStatus] = useState(DEFAULT_STATUS);
+  const [modalNotice, setModalNotice] = useState<Notice | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const previewPriceBasic = calculateSalePrice(originPrice, profitPercentBasic);
   const previewPricePro = calculateSalePrice(originPrice, profitPercentPro);
@@ -88,6 +104,7 @@ export default function PackageManagement() {
       }
     } catch (error) {
       console.error(error);
+      setNotice({ tone: "error", message: "Không tải được danh sách gói nạp." });
     } finally {
       setLoading(false);
     }
@@ -127,6 +144,7 @@ export default function PackageManagement() {
     setThumbnailFile(null);
     setPackageType(DEFAULT_TYPE);
     setStatus(DEFAULT_STATUS);
+    setModalNotice(null);
     applyGameDefaults(targetGameId);
   };
 
@@ -146,6 +164,7 @@ export default function PackageManagement() {
     setThumbnailFile(null);
     setPackageType(pkg.package_type || DEFAULT_TYPE);
     setStatus(pkg.status || DEFAULT_STATUS);
+    setModalNotice(null);
   };
 
   const handleAddNew = () => {
@@ -154,9 +173,16 @@ export default function PackageManagement() {
     resetForm(defaultGameId);
   };
 
+  const handleCloseModal = () => {
+    if (saving) return;
+    setEditingPkg(null);
+    setThumbnailFile(null);
+    setModalNotice(null);
+  };
+
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!editingPkg) return;
+    if (!editingPkg || saving) return;
 
     const payload = {
       ...editingPkg,
@@ -174,23 +200,49 @@ export default function PackageManagement() {
       status,
     };
 
-    const response = await adminApi.savePackage(payload);
-    if (response) {
-      setEditingPkg(null);
-      setThumbnailFile(null);
-      await loadData();
+    setSaving(true);
+    setModalNotice({ tone: "info", message: "Đang lưu gói nạp..." });
+
+    try {
+      const response = await adminApi.savePackage(payload);
+      if (response) {
+        setNotice({ tone: "success", message: `Đã lưu gói "${packageName}" thành công.` });
+        setEditingPkg(null);
+        setThumbnailFile(null);
+        setModalNotice(null);
+        await loadData();
+      }
+    } catch (error) {
+      console.error(error);
+      setModalNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Lưu gói nạp thất bại.",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bạn có chắc muốn xóa gói nạp này?")) return;
-    await adminApi.deletePackage(id);
-    await loadData();
+
+    try {
+      await adminApi.deletePackage(id);
+      setNotice({ tone: "success", message: "Đã xóa gói nạp thành công." });
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Xóa gói nạp thất bại.",
+      });
+    }
   };
 
   const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     setThumbnailFile(file);
+    setModalNotice(file ? { tone: "info", message: `Đã chọn ảnh: ${file.name}` } : null);
   };
 
   const filteredPackages = packages.filter((pkg) => {
@@ -207,6 +259,13 @@ export default function PackageManagement() {
 
   return (
     <div className="space-y-6">
+      {notice ? (
+        <div className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm ${noticeStyles[notice.tone]}`}>
+          {notice.tone === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          <span>{notice.message}</span>
+        </div>
+      ) : null}
+
       <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-white/5 bg-[#1e293b]/40 p-4 shadow-lg backdrop-blur-md md:flex-row">
         <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
           <select
@@ -308,15 +367,9 @@ export default function PackageManagement() {
 
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1 text-xs">
-                            <span className="font-bold text-purple-400">
-                              Basic: {toNumber(pkg.price_basic || pkg.price).toLocaleString("vi-VN")}đ
-                            </span>
-                            <span className="font-semibold text-cyan-400">
-                              Pro: {toNumber(pkg.price_pro || pkg.price).toLocaleString("vi-VN")}đ
-                            </span>
-                            <span className="font-semibold text-emerald-400">
-                              Plus: {toNumber(pkg.price_plus || pkg.price).toLocaleString("vi-VN")}đ
-                            </span>
+                            <span className="font-bold text-purple-400">Basic: {toNumber(pkg.price_basic || pkg.price).toLocaleString("vi-VN")}đ</span>
+                            <span className="font-semibold text-cyan-400">Pro: {toNumber(pkg.price_pro || pkg.price).toLocaleString("vi-VN")}đ</span>
+                            <span className="font-semibold text-emerald-400">Plus: {toNumber(pkg.price_plus || pkg.price).toLocaleString("vi-VN")}đ</span>
                           </div>
                         </td>
 
@@ -358,21 +411,26 @@ export default function PackageManagement() {
         </div>
       )}
 
-      {editingPkg && (
+      {editingPkg ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
             <div className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/40 px-6 py-4">
               <h3 className="text-base font-bold text-white">{editingPkg.id ? "Chỉnh sửa gói nạp" : "Thêm gói nạp mới"}</h3>
-              <button onClick={() => setEditingPkg(null)} className="text-zinc-400 hover:text-white">
+              <button onClick={handleCloseModal} disabled={saving} className="text-zinc-400 hover:text-white disabled:opacity-50">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4 p-6">
+              {modalNotice ? (
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${noticeStyles[modalNotice.tone]}`}>
+                  {modalNotice.tone === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                  <span>{modalNotice.message}</span>
+                </div>
+              ) : null}
+
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Tên gói nạp
-                </label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Tên gói nạp</label>
                 <input
                   type="text"
                   value={packageName}
@@ -385,9 +443,7 @@ export default function PackageManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Chọn game
-                  </label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Chọn game</label>
                   <select
                     value={gameId}
                     onChange={(event) => {
@@ -408,9 +464,7 @@ export default function PackageManagement() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Loại gói
-                  </label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Loại gói</label>
                   <input
                     type="text"
                     value={packageType}
@@ -424,9 +478,7 @@ export default function PackageManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    ID gói API
-                  </label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">ID gói API</label>
                   <input
                     type="text"
                     value={apiId}
@@ -438,9 +490,7 @@ export default function PackageManagement() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Trạng thái
-                  </label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Trạng thái</label>
                   <select
                     value={status}
                     onChange={(event) => setStatus(event.target.value)}
@@ -453,16 +503,20 @@ export default function PackageManagement() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Ảnh gói nạp
-                </label>
-                <div className="relative rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5">
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.gif,.webp"
-                    onChange={handleThumbnailChange}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Ảnh gói nạp</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.gif,.webp"
+                  onChange={handleThumbnailChange}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5"
+                >
                   {thumbnailPreview ? (
                     <div className="inline-block">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -485,7 +539,7 @@ export default function PackageManagement() {
                       <p className="mt-1 text-xs text-zinc-500">PNG, JPG, GIF, WEBP</p>
                     </div>
                   )}
-                </div>
+                </button>
                 {!thumbnailFile && thumbnail ? <p className="mt-2 text-xs text-zinc-500">Đang dùng ảnh hiện tại trên server.</p> : null}
               </div>
 
@@ -497,9 +551,7 @@ export default function PackageManagement() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      Giá API
-                    </label>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Giá API</label>
                     <div className="relative">
                       <input
                         type="number"
@@ -519,9 +571,7 @@ export default function PackageManagement() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      Giá vốn
-                    </label>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Giá vốn</label>
                     <div className="relative">
                       <input
                         type="number"
@@ -538,9 +588,7 @@ export default function PackageManagement() {
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                   <div className="rounded-xl border border-white/10 bg-[#0f172a]/40 p-3">
-                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                      % Basic
-                    </label>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">% Basic</label>
                     <input
                       type="number"
                       value={profitPercentBasic}
@@ -551,9 +599,7 @@ export default function PackageManagement() {
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-[#0f172a]/40 p-3">
-                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                      % Pro
-                    </label>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">% Pro</label>
                     <input
                       type="number"
                       value={profitPercentPro}
@@ -564,9 +610,7 @@ export default function PackageManagement() {
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-[#0f172a]/40 p-3">
-                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                      % Plus
-                    </label>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">% Plus</label>
                     <input
                       type="number"
                       value={profitPercentPlus}
@@ -581,22 +625,24 @@ export default function PackageManagement() {
               <div className="mt-6 flex justify-end gap-3 border-t border-white/5 pt-4">
                 <button
                   type="button"
-                  onClick={() => setEditingPkg(null)}
-                  className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10"
+                  onClick={handleCloseModal}
+                  disabled={saving}
+                  className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-cyan-500"
+                  disabled={saving}
+                  className="rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 px-5 py-2 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Lưu gói nạp
+                  {saving ? "Đang lưu..." : "Lưu gói nạp"}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
