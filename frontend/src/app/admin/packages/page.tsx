@@ -315,7 +315,7 @@ export default function PackageManagement() {
               <thead>
                 <tr className="border-b border-white/5 bg-[#0f172a]/30 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   <th className="px-6 py-4">Tên gói nạp</th>
-                  <th className="px-6 py-4">Loại / ID API</th>
+                  <th className="px-6 py-4">Loại gói</th>
                   <th className="px-6 py-4">Giá API / Vốn</th>
                   <th className="px-6 py-4">Giá bán</th>
                   <th className="px-6 py-4">Trạng thái</th>
@@ -353,10 +353,7 @@ export default function PackageManagement() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4">
-                          <span className="block text-zinc-400">{pkg.package_type || DEFAULT_TYPE}</span>
-                          <span className="text-xs font-mono text-zinc-500">ID: {pkg.api_id || "N/A"}</span>
-                        </td>
+                        <td className="px-6 py-4 text-zinc-400">{pkg.package_type || DEFAULT_TYPE}</td>
 
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1 font-mono text-xs">
@@ -413,7 +410,7 @@ export default function PackageManagement() {
 
       {editingPkg ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
             <div className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/40 px-6 py-4">
               <h3 className="text-base font-bold text-white">{editingPkg.id ? "Chỉnh sửa gói nạp" : "Thêm gói nạp mới"}</h3>
               <button onClick={handleCloseModal} disabled={saving} className="text-zinc-400 hover:text-white disabled:opacity-50">
@@ -476,30 +473,16 @@ export default function PackageManagement() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">ID gói API</label>
-                  <input
-                    type="text"
-                    value={apiId}
-                    onChange={(event) => setApiId(event.target.value)}
-                    required
-                    placeholder="Ví dụ: 10"
-                    className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 font-mono text-sm text-white outline-none transition focus:border-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Trạng thái</label>
-                  <select
-                    value={status}
-                    onChange={(event) => setStatus(event.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Disabled</option>
-                  </select>
-                </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Trạng thái</label>
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Disabled</option>
+                </select>
               </div>
 
               <div>
@@ -515,7 +498,7 @@ export default function PackageManagement() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-6 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5"
+                  className="w-full rounded-xl border border-dashed border-white/20 bg-[#0f172a]/30 p-4 text-center transition hover:border-purple-500/50 hover:bg-purple-500/5"
                 >
                   {thumbnailPreview ? (
                     <div className="inline-block">
@@ -523,7 +506,7 @@ export default function PackageManagement() {
                       <img
                         src={thumbnailPreview}
                         alt="Package preview"
-                        className="mx-auto max-h-36 rounded-lg border border-white/10 bg-[#0f172a] object-contain p-1"
+                        className="mx-auto max-h-24 rounded-lg border border-white/10 bg-[#0f172a] object-contain p-1"
                       />
                       <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-300">
                         <Upload className="h-3 w-3" />
