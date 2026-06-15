@@ -50,7 +50,7 @@ export default function OrderManagement() {
       (statusFilter === 'success' && (o.status === 'success' || o.status === 'COMPLETED' || o.status === 'success')) ||
       (statusFilter === 'failed' && (o.status === 'failed' || o.status === 'cancelled' || o.status === 'FAILED'));
 
-    const searchStr = `${o.id} ${o.user_name} ${o.user_email} ${o.game_name} ${o.package_name}`.toLowerCase();
+    const searchStr = `${o.id} ${o.user_name} ${o.user_email} ${o.game_name} ${o.package_name} ${o.quantity || 1}`.toLowerCase();
     const matchesSearch = searchStr.includes(search.toLowerCase());
 
     return matchesStatus && matchesSearch;
@@ -143,7 +143,10 @@ export default function OrderManagement() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="font-semibold text-white">{order.game_name}</div>
-                          <div className="text-zinc-400 text-xs mt-0.5">{order.package_name}</div>
+                          <div className="text-zinc-400 text-xs mt-0.5">
+                            {order.package_name}
+                            {Number(order.quantity || 1) > 1 ? ` x${Number(order.quantity)}` : ''}
+                          </div>
                         </td>
                         <td className="px-6 py-4 max-w-xs">
                           <div className="text-zinc-300 font-mono text-xs truncate" title={accountStr}>
@@ -223,7 +226,10 @@ export default function OrderManagement() {
                 <div>
                   <p className="text-[10px] uppercase font-bold tracking-wider text-purple-400">Trò chơi</p>
                   <h4 className="font-bold text-lg text-white mt-0.5">{selectedOrder.game_name}</h4>
-                  <p className="text-zinc-400 text-xs mt-0.5">{selectedOrder.package_name}</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">
+                    {selectedOrder.package_name}
+                    {Number(selectedOrder.quantity || 1) > 1 ? ` x${Number(selectedOrder.quantity)}` : ''}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] uppercase font-bold tracking-wider text-cyan-400">Thanh toán</p>

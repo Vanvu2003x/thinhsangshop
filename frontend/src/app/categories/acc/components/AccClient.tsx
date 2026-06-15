@@ -68,7 +68,7 @@ export default function AccClient({ gamecode }: AccClientProps) {
           setUserLevel(Number(user.level));
         }
       } catch (error) {
-        // Not logged in or mock user
+        // Guest users may browse account listings without loading a profile.
       }
     }
     loadProfile();

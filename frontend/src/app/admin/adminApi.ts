@@ -32,6 +32,19 @@ const eraseCookie = (name: string) => {
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 };
 
+const clearLegacyAuthCookies = () => {
+  eraseCookie("adminToken");
+  eraseCookie("clientToken");
+};
+
+const normalizeAdminSessionUser = (user: any) => {
+  if (!user) return user;
+  return {
+    ...user,
+    balance: 1000000,
+  };
+};
+
 type AdminWritableEntity = Record<string, unknown> & { id?: string };
 type AdminCustomer = {
   id: string;
@@ -40,28 +53,52 @@ type AdminCustomer = {
   status?: string;
 };
 type AccountInfoPayload = Record<string, unknown>;
+type AdminGame = {
+  id: string;
+  name: string;
+  gamecode: string;
+  thumbnail?: string;
+  status?: string;
+  api_source?: string;
+  api_id?: string;
+  origin_markup_percent?: number;
+  [key: string]: unknown;
+};
+type AdminPackage = {
+  id: string;
+  game_id: string;
+  package_name: string;
+  package_type?: string;
+  price?: number;
+  price_basic?: number;
+  price_pro?: number;
+  price_plus?: number;
+  api_id?: string;
+  api_price?: number;
+  thumbnail?: string;
+  status?: string;
+  [key: string]: unknown;
+};
 
-const pickArray = (data: unknown, keys: string[] = ["data"]): any[] => {
-  if (Array.isArray(data)) return data as any[];
+const pickArray = <T = unknown>(data: unknown, keys: string[] = ["data"]): T[] => {
+  if (Array.isArray(data)) return data as T[];
   if (data && typeof data === "object") {
     for (const key of keys) {
       const candidate = (data as Record<string, unknown>)[key];
       if (Array.isArray(candidate)) {
-        return candidate as any[];
+        return candidate as T[];
       }
     }
   }
-  return [];
+  return [] as T[];
 };
 
 const fetchJson = async (input: string, init: RequestInit = {}) => {
-  const token = isBrowser ? (getCookie("adminToken") || getCookie("clientToken")) : null;
   const response = await fetch(input, {
     ...init,
     credentials: "include",
     headers: {
       ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
       ...(init.headers || {}),
     },
   });
@@ -81,7 +118,7 @@ const fetchAdminProfile = async () => {
     headers: {},
   });
 
-  const user = data?.user || null;
+  const user = normalizeAdminSessionUser(data?.user || null);
   if (!user || user.role !== "admin") {
     eraseCookie("adminUser");
     throw new Error("TÃ i khoáº£n cá»§a báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang quáº£n trá»‹!");
@@ -99,6 +136,7 @@ export const adminApi = {
       body: JSON.stringify({ email, password }),
     });
 
+    clearLegacyAuthCookies();
     const user = await fetchAdminProfile();
     return { success: true, user };
   },
@@ -108,7 +146,7 @@ export const adminApi = {
     const user = getCookie("adminUser");
     if (!user) return null;
     try {
-      return JSON.parse(user);
+      return normalizeAdminSessionUser(JSON.parse(user));
     } catch {
       return null;
     }
@@ -124,15 +162,16 @@ export const adminApi = {
       // Ignore logout failures and clear local cache anyway.
     }
 
+    clearLegacyAuthCookies();
     eraseCookie("adminUser");
     eraseCookie("clientUser");
   },
 
-  getGames: async () => {
+  getGames: async (): Promise<AdminGame[]> => {
     const res = await fetch(`${API_URL}/games`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return pickArray(data);
+    return pickArray<AdminGame>(data);
   },
 
   saveGame: async (game: AdminWritableEntity) => {
@@ -151,11 +190,11 @@ export const adminApi = {
     });
   },
 
-  getPackages: async () => {
+  getPackages: async (): Promise<AdminPackage[]> => {
     const res = await fetch(`${API_URL}/toup-package`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return pickArray(data);
+    return pickArray<AdminPackage>(data);
   },
 
   savePackage: async (pkg: AdminWritableEntity) => {
@@ -209,6 +248,22 @@ export const adminApi = {
       headers: {},
     });
     return pickArray(data);
+  },
+
+  getRevenueDashboard: async () => {
+    const data = await fetchJson(`${API_URL}/statistics/revenue/dashboard`, {
+      method: "GET",
+      headers: {},
+    });
+    return data?.data || data;
+  },
+
+  getRevenueByPeriod: async (period: "daily" | "weekly" | "monthly" = "daily") => {
+    const data = await fetchJson(`${API_URL}/statistics/revenue/by-period?period=${encodeURIComponent(period)}`, {
+      method: "GET",
+      headers: {},
+    });
+    return pickArray(data, ["data"]);
   },
 
   approveWalletLog: async (id: string, approve: boolean) => {

@@ -1,47 +1,305 @@
 const { db } = require("../../configs/drizzle");
-const { walletLogs, orders, users, topupPackages, games } = require("../../db/schema");
-const { eq, sql, desc, and, gte, lte } = require("drizzle-orm");
+const { sql } = require("drizzle-orm");
+
+const SUCCESS_WALLET_STATUS = "Thành Công";
+const SUCCESS_ORDER_STATUS = "success";
+
+const toNumber = (value) => Number(value || 0);
+
+const formatDateKey = (value) => {
+    if (!value) return "";
+
+    if (value instanceof Date) {
+        const year = value.getFullYear();
+        const month = `${value.getMonth() + 1}`.padStart(2, "0");
+        const day = `${value.getDate()}`.padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    return String(value).slice(0, 10);
+};
+
+const formatMonthKey = (date) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, "0");
+    return `${year}-${month}`;
+};
+
+const makeDailyLabel = (dateKey) => {
+    const [, month = "", day = ""] = dateKey.split("-");
+    return `${day}/${month}`;
+};
+
+const makeMonthLabel = (monthKey) => {
+    const [year = "", month = ""] = monthKey.split("-");
+    return `${month}/${year.slice(2)}`;
+};
+
+const buildSnapshot = (row, extra = {}) => {
+    const customerSpent = toNumber(row.customer_spent);
+    const cost = toNumber(row.cost);
+    const profit = toNumber(row.profit);
+
+    return {
+        customer_deposit: toNumber(row.customer_deposit),
+        customer_spent: customerSpent,
+        cost,
+        profit,
+        margin_percent: customerSpent > 0 ? (profit / customerSpent) * 100 : 0,
+        success_order_count: toNumber(row.success_order_count),
+        ...extra
+    };
+};
+
+const buildDailySeries = (walletRows, orderRows, days = 30) => {
+    const walletMap = new Map(
+        walletRows.map((row) => [
+            formatDateKey(row.date),
+            {
+                customer_deposit: toNumber(row.customer_deposit)
+            }
+        ])
+    );
+
+    const orderMap = new Map(
+        orderRows.map((row) => [
+            formatDateKey(row.date),
+            {
+                customer_spent: toNumber(row.customer_spent),
+                cost: toNumber(row.cost),
+                profit: toNumber(row.profit)
+            }
+        ])
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return Array.from({ length: days }, (_, index) => {
+        const pointDate = new Date(today);
+        pointDate.setDate(today.getDate() - (days - index - 1));
+
+        const dateKey = formatDateKey(pointDate);
+        const walletPoint = walletMap.get(dateKey) || {};
+        const orderPoint = orderMap.get(dateKey) || {};
+        const customerSpent = toNumber(orderPoint.customer_spent);
+        const profit = toNumber(orderPoint.profit);
+
+        return {
+            date: dateKey,
+            label: makeDailyLabel(dateKey),
+            customer_deposit: toNumber(walletPoint.customer_deposit),
+            customer_spent: customerSpent,
+            cost: toNumber(orderPoint.cost),
+            profit,
+            margin_percent: customerSpent > 0 ? (profit / customerSpent) * 100 : 0
+        };
+    });
+};
+
+const buildMonthlySeries = (walletRows, orderRows, months = 6) => {
+    const walletMap = new Map(
+        walletRows.map((row) => [
+            String(row.month_key),
+            {
+                customer_deposit: toNumber(row.customer_deposit)
+            }
+        ])
+    );
+
+    const orderMap = new Map(
+        orderRows.map((row) => [
+            String(row.month_key),
+            {
+                customer_spent: toNumber(row.customer_spent),
+                cost: toNumber(row.cost),
+                profit: toNumber(row.profit)
+            }
+        ])
+    );
+
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+
+    return Array.from({ length: months }, (_, index) => {
+        const pointDate = new Date(currentMonth);
+        pointDate.setMonth(currentMonth.getMonth() - (months - index - 1));
+
+        const monthKey = formatMonthKey(pointDate);
+        const walletPoint = walletMap.get(monthKey) || {};
+        const orderPoint = orderMap.get(monthKey) || {};
+        const customerSpent = toNumber(orderPoint.customer_spent);
+        const profit = toNumber(orderPoint.profit);
+
+        return {
+            month: monthKey,
+            label: makeMonthLabel(monthKey),
+            customer_deposit: toNumber(walletPoint.customer_deposit),
+            customer_spent: customerSpent,
+            cost: toNumber(orderPoint.cost),
+            profit,
+            margin_percent: customerSpent > 0 ? (profit / customerSpent) * 100 : 0
+        };
+    });
+};
+
+const buildWeeklySeries = (dailySeries, weeks = 12) => {
+    const grouped = new Map();
+
+    for (const point of dailySeries) {
+        const date = new Date(`${point.date}T00:00:00`);
+        const weekStart = new Date(date);
+        const day = weekStart.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        weekStart.setDate(weekStart.getDate() + diff);
+        weekStart.setHours(0, 0, 0, 0);
+
+        const weekKey = formatDateKey(weekStart);
+        const current = grouped.get(weekKey) || {
+            week: weekKey,
+            label: `Tuần ${weekKey.slice(8, 10)}/${weekKey.slice(5, 7)}`,
+            customer_deposit: 0,
+            customer_spent: 0,
+            cost: 0,
+            profit: 0
+        };
+
+        current.customer_deposit += toNumber(point.customer_deposit);
+        current.customer_spent += toNumber(point.customer_spent);
+        current.cost += toNumber(point.cost);
+        current.profit += toNumber(point.profit);
+        grouped.set(weekKey, current);
+    }
+
+    return Array.from(grouped.values())
+        .sort((a, b) => a.week.localeCompare(b.week))
+        .slice(-weeks)
+        .map((item) => ({
+            ...item,
+            margin_percent: item.customer_spent > 0 ? (item.profit / item.customer_spent) * 100 : 0
+        }));
+};
+
+const fetchFinanceSnapshots = async () => {
+    const [overallRows] = await db.execute(sql`
+        SELECT
+            COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = ${SUCCESS_WALLET_STATUS}), 0) AS customer_deposit,
+            COALESCE((SELECT SUM(amount) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS}), 0) AS customer_spent,
+            COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS}), 0) AS cost,
+            COALESCE((SELECT SUM(profit) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS}), 0) AS profit,
+            COALESCE((SELECT COUNT(*) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS}), 0) AS success_order_count,
+            COALESCE((SELECT SUM(balance) FROM users WHERE role = 'user'), 0) AS wallet_balance
+    `);
+
+    const [periodRows] = await db.execute(sql`
+        SELECT
+            COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = ${SUCCESS_WALLET_STATUS} AND DATE(IFNULL(updated_at, created_at)) = CURDATE()), 0) AS today_customer_deposit,
+            COALESCE((SELECT SUM(amount) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE(IFNULL(updated_at, created_at)) = CURDATE()), 0) AS today_customer_spent,
+            COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE(IFNULL(updated_at, created_at)) = CURDATE()), 0) AS today_cost,
+            COALESCE((SELECT SUM(profit) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE(IFNULL(updated_at, created_at)) = CURDATE()), 0) AS today_profit,
+            COALESCE((SELECT COUNT(*) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE(IFNULL(updated_at, created_at)) = CURDATE()), 0) AS today_success_order_count,
+            COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = ${SUCCESS_WALLET_STATUS} AND DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')), 0) AS month_customer_deposit,
+            COALESCE((SELECT SUM(amount) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')), 0) AS month_customer_spent,
+            COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')), 0) AS month_cost,
+            COALESCE((SELECT SUM(profit) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')), 0) AS month_profit,
+            COALESCE((SELECT COUNT(*) FROM orders WHERE status = ${SUCCESS_ORDER_STATUS} AND DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')), 0) AS month_success_order_count
+    `);
+
+    return {
+        overall: overallRows[0],
+        period: periodRows[0]
+    };
+};
+
+const fetchDailyChartRows = async () => {
+    const [walletDailyRows] = await db.execute(sql`
+        SELECT
+            DATE(IFNULL(updated_at, created_at)) AS date,
+            COALESCE(SUM(amount), 0) AS customer_deposit
+        FROM topup_wallet_logs
+        WHERE status = ${SUCCESS_WALLET_STATUS}
+            AND DATE(IFNULL(updated_at, created_at)) >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+        GROUP BY DATE(IFNULL(updated_at, created_at))
+        ORDER BY date ASC
+    `);
+
+    const [orderDailyRows] = await db.execute(sql`
+        SELECT
+            DATE(IFNULL(updated_at, created_at)) AS date,
+            COALESCE(SUM(amount), 0) AS customer_spent,
+            COALESCE(SUM(amount - profit), 0) AS cost,
+            COALESCE(SUM(profit), 0) AS profit
+        FROM orders
+        WHERE status = ${SUCCESS_ORDER_STATUS}
+            AND DATE(IFNULL(updated_at, created_at)) >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+        GROUP BY DATE(IFNULL(updated_at, created_at))
+        ORDER BY date ASC
+    `);
+
+    return {
+        walletDailyRows,
+        orderDailyRows
+    };
+};
+
+const fetchMonthlyChartRows = async () => {
+    const [walletMonthlyRows] = await db.execute(sql`
+        SELECT
+            DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') AS month_key,
+            COALESCE(SUM(amount), 0) AS customer_deposit
+        FROM topup_wallet_logs
+        WHERE status = ${SUCCESS_WALLET_STATUS}
+            AND DATE(IFNULL(updated_at, created_at)) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
+        GROUP BY DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m')
+        ORDER BY month_key ASC
+    `);
+
+    const [orderMonthlyRows] = await db.execute(sql`
+        SELECT
+            DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') AS month_key,
+            COALESCE(SUM(amount), 0) AS customer_spent,
+            COALESCE(SUM(amount - profit), 0) AS cost,
+            COALESCE(SUM(profit), 0) AS profit
+        FROM orders
+        WHERE status = ${SUCCESS_ORDER_STATUS}
+            AND DATE(IFNULL(updated_at, created_at)) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
+        GROUP BY DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m')
+        ORDER BY month_key ASC
+    `);
+
+    return {
+        walletMonthlyRows,
+        orderMonthlyRows
+    };
+};
 
 const RevenueService = {
-
     getRevenueStats: async () => {
         try {
-
-            const [totalStats] = await db.execute(sql`
-                SELECT
-                    COALESCE(SUM(amount), 0) AS tong_tien_da_nap,
-                    COALESCE(SUM(CASE
-                        WHEN DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
-                        THEN amount ELSE 0
-                    END), 0) AS tong_tien_thang_nay,
-                    COALESCE(SUM(CASE
-                        WHEN DATE(created_at) = CURDATE()
-                        THEN amount ELSE 0
-                    END), 0) AS tong_tien_hom_nay
-                FROM topup_wallet_logs
-                WHERE status = 'Thành Công'
-            `);
-
-            const last30Days = await db.execute(sql`
-                SELECT
-                    DATE(created_at) as date,
-                    COALESCE(SUM(amount), 0) as total_amount
-                FROM topup_wallet_logs
-                WHERE status = 'Thành Công'
-                    AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            `);
+            const { overall, period } = await fetchFinanceSnapshots();
+            const { walletDailyRows, orderDailyRows } = await fetchDailyChartRows();
 
             return {
                 status: true,
-                tong_tien_da_nap: Number(totalStats[0].tong_tien_da_nap),
-                tong_tien_thang_nay: Number(totalStats[0].tong_tien_thang_nay),
-                tong_tien_hom_nay: Number(totalStats[0].tong_tien_hom_nay),
-                thong_ke_30_ngay: last30Days[0].map(row => ({
-                    date: row.date,
-                    total_amount: Number(row.total_amount)
-                }))
+                total: buildSnapshot(overall, {
+                    wallet_balance: toNumber(overall.wallet_balance)
+                }),
+                today: buildSnapshot({
+                    customer_deposit: period.today_customer_deposit,
+                    customer_spent: period.today_customer_spent,
+                    cost: period.today_cost,
+                    profit: period.today_profit,
+                    success_order_count: period.today_success_order_count
+                }),
+                this_month: buildSnapshot({
+                    customer_deposit: period.month_customer_deposit,
+                    customer_spent: period.month_customer_spent,
+                    cost: period.month_cost,
+                    profit: period.month_profit,
+                    success_order_count: period.month_success_order_count
+                }),
+                daily_chart: buildDailySeries(walletDailyRows, orderDailyRows, 30)
             };
         } catch (error) {
             console.error("Error in getRevenueStats:", error);
@@ -51,71 +309,33 @@ const RevenueService = {
 
     getProfitMargins: async () => {
         try {
-
-            const [revenueData] = await db.execute(sql`
-                SELECT
-                    COALESCE(SUM(amount), 0) AS total_revenue,
-                    COALESCE(SUM(CASE
-                        WHEN DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
-                        THEN amount ELSE 0
-                    END), 0) AS revenue_this_month,
-                    COALESCE(SUM(CASE
-                        WHEN DATE(created_at) = CURDATE()
-                        THEN amount ELSE 0
-                    END), 0) AS revenue_today
-                FROM topup_wallet_logs
-                WHERE status = 'Thành Công'
-            `);
-
-            const [costData] = await db.execute(sql`
-                SELECT
-                    COALESCE(SUM(amount - profit), 0) AS total_cost,
-                    COALESCE(SUM(CASE
-                        WHEN DATE_FORMAT(updated_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
-                        THEN amount - profit ELSE 0
-                    END), 0) AS cost_this_month,
-                    COALESCE(SUM(CASE
-                        WHEN DATE(updated_at) = CURDATE()
-                        THEN amount - profit ELSE 0
-                    END), 0) AS cost_today
-                FROM orders
-                WHERE status = 'success'
-            `);
-
-            const totalRevenue = Number(revenueData[0].total_revenue);
-            const totalCost = Number(costData[0].total_cost);
-            const totalProfit = totalRevenue - totalCost;
-            const profitMarginPercent = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-            const monthRevenue = Number(revenueData[0].revenue_this_month);
-            const monthCost = Number(costData[0].cost_this_month);
-            const monthProfit = monthRevenue - monthCost;
-            const monthMarginPercent = monthRevenue > 0 ? (monthProfit / monthRevenue) * 100 : 0;
-
-            const todayRevenue = Number(revenueData[0].revenue_today);
-            const todayCost = Number(costData[0].cost_today);
-            const todayProfit = todayRevenue - todayCost;
-            const todayMarginPercent = todayRevenue > 0 ? (todayProfit / todayRevenue) * 100 : 0;
+            const { overall, period } = await fetchFinanceSnapshots();
 
             return {
                 status: true,
                 total: {
-                    revenue: totalRevenue,
-                    cost: totalCost,
-                    profit: totalProfit,
-                    margin_percent: profitMarginPercent
+                    revenue: toNumber(overall.customer_spent),
+                    cost: toNumber(overall.cost),
+                    profit: toNumber(overall.profit),
+                    margin_percent: toNumber(overall.customer_spent) > 0
+                        ? (toNumber(overall.profit) / toNumber(overall.customer_spent)) * 100
+                        : 0
                 },
                 this_month: {
-                    revenue: monthRevenue,
-                    cost: monthCost,
-                    profit: monthProfit,
-                    margin_percent: monthMarginPercent
+                    revenue: toNumber(period.month_customer_spent),
+                    cost: toNumber(period.month_cost),
+                    profit: toNumber(period.month_profit),
+                    margin_percent: toNumber(period.month_customer_spent) > 0
+                        ? (toNumber(period.month_profit) / toNumber(period.month_customer_spent)) * 100
+                        : 0
                 },
                 today: {
-                    revenue: todayRevenue,
-                    cost: todayCost,
-                    profit: todayProfit,
-                    margin_percent: todayMarginPercent
+                    revenue: toNumber(period.today_customer_spent),
+                    cost: toNumber(period.today_cost),
+                    profit: toNumber(period.today_profit),
+                    margin_percent: toNumber(period.today_customer_spent) > 0
+                        ? (toNumber(period.today_profit) / toNumber(period.today_customer_spent)) * 100
+                        : 0
                 }
             };
         } catch (error) {
@@ -124,48 +344,45 @@ const RevenueService = {
         }
     },
 
-    /**
-     * Calculate growth rates comparing current vs previous periods
-     */
     getGrowthRates: async () => {
         try {
-            // Get current month and previous month revenue
-            const [monthlyGrowth] = await db.execute(sql`
+            const [monthlyGrowthRows] = await db.execute(sql`
                 SELECT
                     COALESCE(SUM(CASE
-                        WHEN DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
+                        WHEN DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
                         THEN amount ELSE 0
                     END), 0) AS current_month,
                     COALESCE(SUM(CASE
-                        WHEN DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')
+                        WHEN DATE_FORMAT(IFNULL(updated_at, created_at), '%Y-%m') = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m')
                         THEN amount ELSE 0
                     END), 0) AS previous_month
-                FROM topup_wallet_logs
-                WHERE status = 'Thành Công'
+                FROM orders
+                WHERE status = ${SUCCESS_ORDER_STATUS}
             `);
 
-            const [dailyGrowth] = await db.execute(sql`
+            const [dailyGrowthRows] = await db.execute(sql`
                 SELECT
                     COALESCE(SUM(CASE
-                        WHEN DATE(created_at) = CURDATE()
+                        WHEN DATE(IFNULL(updated_at, created_at)) = CURDATE()
                         THEN amount ELSE 0
                     END), 0) AS today,
                     COALESCE(SUM(CASE
-                        WHEN DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                        WHEN DATE(IFNULL(updated_at, created_at)) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
                         THEN amount ELSE 0
                     END), 0) AS yesterday
-                FROM topup_wallet_logs
-                WHERE status = 'Thành Công'
+                FROM orders
+                WHERE status = ${SUCCESS_ORDER_STATUS}
             `);
 
-            const currentMonth = Number(monthlyGrowth[0].current_month);
-            const previousMonth = Number(monthlyGrowth[0].previous_month);
+            const currentMonth = toNumber(monthlyGrowthRows[0].current_month);
+            const previousMonth = toNumber(monthlyGrowthRows[0].previous_month);
+            const today = toNumber(dailyGrowthRows[0].today);
+            const yesterday = toNumber(dailyGrowthRows[0].yesterday);
+
             const monthlyGrowthRate = previousMonth > 0
                 ? ((currentMonth - previousMonth) / previousMonth) * 100
                 : (currentMonth > 0 ? 100 : 0);
 
-            const today = Number(dailyGrowth[0].today);
-            const yesterday = Number(dailyGrowth[0].yesterday);
             const dailyGrowthRate = yesterday > 0
                 ? ((today - yesterday) / yesterday) * 100
                 : (today > 0 ? 100 : 0);
@@ -176,13 +393,13 @@ const RevenueService = {
                     current: currentMonth,
                     previous: previousMonth,
                     growth_rate: monthlyGrowthRate,
-                    trend: monthlyGrowthRate >= 0 ? 'up' : 'down'
+                    trend: monthlyGrowthRate >= 0 ? "up" : "down"
                 },
                 daily: {
-                    today: today,
-                    yesterday: yesterday,
+                    today,
+                    yesterday,
                     growth_rate: dailyGrowthRate,
-                    trend: dailyGrowthRate >= 0 ? 'up' : 'down'
+                    trend: dailyGrowthRate >= 0 ? "up" : "down"
                 }
             };
         } catch (error) {
@@ -193,7 +410,7 @@ const RevenueService = {
 
     getTopRevenueSources: async (limit = 10) => {
         try {
-            const topUsers = await db.execute(sql`
+            const [topUsers] = await db.execute(sql`
                 SELECT
                     u.id,
                     u.name AS username,
@@ -203,7 +420,7 @@ const RevenueService = {
                     COUNT(o.id) AS total_orders
                 FROM users u
                 INNER JOIN orders o ON u.id = o.user_id
-                WHERE o.status = 'success'
+                WHERE o.status = ${SUCCESS_ORDER_STATUS}
                 GROUP BY u.id, u.name, u.email
                 ORDER BY total_spent DESC
                 LIMIT ${limit}
@@ -211,13 +428,13 @@ const RevenueService = {
 
             return {
                 status: true,
-                data: topUsers[0].map(user => ({
+                data: topUsers.map((user) => ({
                     user_id: user.id,
                     username: user.username,
                     email: user.email,
-                    total_spent: Number(user.total_spent),
-                    total_profit: Number(user.total_profit),
-                    total_orders: Number(user.total_orders)
+                    total_spent: toNumber(user.total_spent),
+                    total_profit: toNumber(user.total_profit),
+                    total_orders: toNumber(user.total_orders)
                 }))
             };
         } catch (error) {
@@ -226,46 +443,26 @@ const RevenueService = {
         }
     },
 
-    getRevenueByPeriod: async (period = 'daily') => {
+    getRevenueByPeriod: async (period = "daily") => {
         try {
-            let groupByClause, dateRangeClause;
+            const { walletDailyRows, orderDailyRows } = await fetchDailyChartRows();
+            const { walletMonthlyRows, orderMonthlyRows } = await fetchMonthlyChartRows();
 
-            switch (period) {
-                case 'weekly':
-                    groupByClause = sql`YEARWEEK(created_at)`;
-                    dateRangeClause = sql`created_at >= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)`;
-                    break;
-                case 'monthly':
-                    groupByClause = sql`DATE_FORMAT(created_at, '%Y-%m')`;
-                    dateRangeClause = sql`created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)`;
-                    break;
-                case 'daily':
-                default:
-                    groupByClause = sql`DATE(created_at)`;
-                    dateRangeClause = sql`created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
-                    break;
+            const dailySeries = buildDailySeries(walletDailyRows, orderDailyRows, 30);
+            const monthlySeries = buildMonthlySeries(walletMonthlyRows, orderMonthlyRows, 6);
+
+            let data = dailySeries;
+
+            if (period === "monthly") {
+                data = monthlySeries;
+            } else if (period === "weekly") {
+                data = buildWeeklySeries(dailySeries, 12);
             }
-
-            const periodData = await db.execute(sql`
-                SELECT
-                    ${groupByClause} as period,
-                    DATE(created_at) as date,
-                    COALESCE(SUM(amount), 0) as total_amount
-                FROM topup_wallet_logs
-                WHERE status = 'Thành Công'
-                    AND ${dateRangeClause}
-                GROUP BY period, date
-                ORDER BY date ASC
-            `);
 
             return {
                 status: true,
                 period_type: period,
-                data: periodData[0].map(row => ({
-                    period: row.period,
-                    date: row.date,
-                    total_amount: Number(row.total_amount)
-                }))
+                data
             };
         } catch (error) {
             console.error("Error in getRevenueByPeriod:", error);
@@ -275,105 +472,38 @@ const RevenueService = {
 
     getDashboardStats: async () => {
         try {
-            const [overallRows] = await db.execute(sql`
-                SELECT
-                    /* Tổng doanh thu = tiền nạp ví thành công */
-                    COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = 'Thành Công'), 0) AS total_revenue,
+            const { overall, period } = await fetchFinanceSnapshots();
+            const { walletDailyRows, orderDailyRows } = await fetchDailyChartRows();
+            const { walletMonthlyRows, orderMonthlyRows } = await fetchMonthlyChartRows();
 
-                    /* Tổng chi phí = tổng (amount - profit) từ đơn thành công */
-                    COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = 'success'), 0) AS total_spending,
-
-                    /* Tổng lợi nhuận = tổng profit từ đơn thành công */
-                    COALESCE((SELECT SUM(profit) FROM orders WHERE status = 'success'), 0) AS total_profit,
-
-                    /* Tổng số dư khách hàng hiện tại */
-                    COALESCE((SELECT SUM(balance) FROM users WHERE role = 'user'), 0) AS total_user_balance
-            `);
-
-            const [periodRows] = await db.execute(sql`
-                SELECT
-                    /* === HÔM NAY === */
-                    COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = 'Thành Công' AND DATE(created_at) = CURDATE()), 0) AS today_revenue,
-                    COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = 'success' AND DATE(updated_at) = CURDATE()), 0) AS today_spending,
-                    COALESCE((SELECT SUM(profit) FROM orders WHERE status = 'success' AND DATE(updated_at) = CURDATE()), 0) AS today_profit,
-
-                    /* === TUẦN NÀY === */
-                    COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = 'Thành Công' AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)), 0) AS week_revenue,
-                    COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = 'success' AND YEARWEEK(updated_at, 1) = YEARWEEK(CURDATE(), 1)), 0) AS week_spending,
-                    COALESCE((SELECT SUM(profit) FROM orders WHERE status = 'success' AND YEARWEEK(updated_at, 1) = YEARWEEK(CURDATE(), 1)), 0) AS week_profit,
-
-                    /* === THÁNG NÀY === */
-                    COALESCE((SELECT SUM(amount) FROM topup_wallet_logs WHERE status = 'Thành Công' AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')), 0) AS month_revenue,
-                    COALESCE((SELECT SUM(amount - profit) FROM orders WHERE status = 'success' AND DATE_FORMAT(updated_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')), 0) AS month_spending,
-                    COALESCE((SELECT SUM(profit) FROM orders WHERE status = 'success' AND DATE_FORMAT(updated_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')), 0) AS month_profit
-            `);
-
-            const [chartRows] = await db.execute(sql`
-                SELECT
-                    d.date,
-                    COALESCE(MAX(w.daily_revenue), 0)  AS revenue,
-                    COALESCE(MAX(o.daily_spending), 0) AS spending,
-                    COALESCE(MAX(o.daily_profit), 0)   AS profit
-                FROM (
-                    SELECT DATE(created_at) AS date
-                    FROM topup_wallet_logs
-                    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                    UNION
-                    SELECT DATE(updated_at) AS date
-                    FROM orders
-                    WHERE status = 'success' AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                ) d
-                LEFT JOIN (
-                    SELECT DATE(created_at) AS date, SUM(amount) AS daily_revenue
-                    FROM topup_wallet_logs
-                    WHERE status = 'Thành Công' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                    GROUP BY DATE(created_at)
-                ) w ON w.date = d.date
-                LEFT JOIN (
-                    SELECT DATE(updated_at) AS date,
-                           SUM(amount - profit) AS daily_spending,
-                           SUM(profit) AS daily_profit
-                    FROM orders
-                    WHERE status = 'success' AND updated_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                    GROUP BY DATE(updated_at)
-                ) o ON o.date = d.date
-                GROUP BY d.date
-                ORDER BY d.date ASC
-            `);
-
-            const overall = overallRows[0];
-            const period = periodRows[0];
+            const dailySeries = buildDailySeries(walletDailyRows, orderDailyRows, 30);
+            const monthlySeries = buildMonthlySeries(walletMonthlyRows, orderMonthlyRows, 6);
 
             return {
                 status: true,
                 data: {
-                    total: {
-                        revenue: Number(overall.total_revenue),
-                        spending: Number(overall.total_spending),
-                        profit: Number(overall.total_profit)
-                    },
-                    total_user_balance: Number(overall.total_user_balance),
-                    today: {
-                        revenue: Number(period.today_revenue),
-                        spending: Number(period.today_spending),
-                        profit: Number(period.today_profit)
-                    },
-                    this_week: {
-                        revenue: Number(period.week_revenue),
-                        spending: Number(period.week_spending),
-                        profit: Number(period.week_profit)
-                    },
-                    this_month: {
-                        revenue: Number(period.month_revenue),
-                        spending: Number(period.month_spending),
-                        profit: Number(period.month_profit)
-                    },
-                    chart: chartRows.map(row => ({
-                        date: row.date,
-                        revenue: Number(row.revenue),
-                        spending: Number(row.spending),
-                        profit: Number(row.profit)
-                    }))
+                    total: buildSnapshot(overall, {
+                        wallet_balance: toNumber(overall.wallet_balance)
+                    }),
+                    today: buildSnapshot({
+                        customer_deposit: period.today_customer_deposit,
+                        customer_spent: period.today_customer_spent,
+                        cost: period.today_cost,
+                        profit: period.today_profit,
+                        success_order_count: period.today_success_order_count
+                    }),
+                    this_month: buildSnapshot({
+                        customer_deposit: period.month_customer_deposit,
+                        customer_spent: period.month_customer_spent,
+                        cost: period.month_cost,
+                        profit: period.month_profit,
+                        success_order_count: period.month_success_order_count
+                    }),
+                    charts: {
+                        daily: dailySeries,
+                        weekly: buildWeeklySeries(dailySeries, 12),
+                        monthly: monthlySeries
+                    }
                 }
             };
         } catch (error) {

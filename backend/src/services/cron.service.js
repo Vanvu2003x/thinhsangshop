@@ -59,6 +59,10 @@ const initCronJobs = () => {
                             await OrderService.completeOrder(order.id);
                             console.log(`[Cron] Order #${order.id} completed successfully.`);
 
+                        } else if (remoteStatus === 'partial_completed') {
+                            await OrderService.changeOrderStatus(order.id, 'partial_completed');
+                            console.warn(`[Cron] Order #${order.id} is partial completed and needs manual review.`);
+
                         } else if (remoteStatus === 'failed' || remoteStatus === 'cancelled') {
                             await OrderService.cancelOrderAndRefund(order.id);
                             console.log(`[Cron] Order #${order.id} failed/cancelled — refunded.`);

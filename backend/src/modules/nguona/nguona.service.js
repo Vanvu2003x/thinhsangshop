@@ -6,6 +6,22 @@ const { eq, and, sql } = require("drizzle-orm");
 const NGUONA_BASE_URL = process.env.NGUONA_API_URL || 'https://turbo.id.vn/api/partner';
 const NGUONA_API_KEY = process.env.NGUONA_API_KEY;
 
+const normalizeProviderOrderStatus = (status) => {
+    switch (status) {
+        case 'COMPLETED':
+            return 'success';
+        case 'FAILED':
+            return 'failed';
+        case 'PARTIAL_COMPLETED':
+            return 'partial_completed';
+        case 'PENDING':
+            return 'pending';
+        case 'PROCESSING':
+        default:
+            return 'processing';
+    }
+};
+
 const NguonAService = {
     _callApi: async (method, endpoint, data = null) => {
         try {
@@ -253,18 +269,33 @@ const NguonAService = {
                 return { status: 'failed', message: `Game not found for Package ID: ${pkg.id}` };
             }
 
-            const catalogSlug = game.gamecode;
+            const providerGameId = Number(game.api_id);
+            const providerPackageId = Number(packageApiId);
+
+            if (!Number.isInteger(providerPackageId) || providerPackageId <= 0) {
+                return { status: 'failed', message: `Invalid provider package ID: ${packageApiId}` };
+            }
 
             const payload = {
-                catalogSlug,
                 items: [
                     {
-                        packageId: parseInt(packageApiId),
-                        quantity: parseInt(quantity)
+                        packageId: providerPackageId,
+                        quantity: Number(quantity) || 1
                     }
                 ],
-                gameAccountInfo: accountInfo
+                gameAccountInfo: accountInfo || {}
             };
+
+            if (Number.isInteger(providerGameId) && providerGameId > 0) {
+                payload.gameId = providerGameId;
+            } else if (game.gamecode) {
+                payload.catalogSlug = game.gamecode;
+            } else {
+                return {
+                    status: 'failed',
+                    message: `Game ${game.id} is missing both provider gameId and catalogSlug`
+                };
+            }
 
             try {
                 const res = await NguonAService._callApi('POST', '/orders', payload);
@@ -275,7 +306,9 @@ const NguonAService = {
                         data: {
                             id: res.data.orderId,
                             price: res.data.totalPrice,
-                            orderStatus: res.data.status
+                            orderStatus: res.data.status,
+                            splitCount: res.data.splitCount,
+                            orders: res.data.orders || []
                         }
                     };
                 } else {
@@ -294,16 +327,12 @@ const NguonAService = {
         try {
             const res = await NguonAService._callApi('GET', `/orders/${externalOrderId}`);
             if (res && res.success && res.data) {
-                let remoteStatus = 'processing';
-                if (res.data.status === 'COMPLETED') {
-                    remoteStatus = 'success';
-                } else if (res.data.status === 'FAILED' || res.data.status === 'PARTIAL_COMPLETED') {
-                    remoteStatus = 'failed';
-                }
+                const rawStatus = res.data.status;
                 return {
                     status: true,
                     order: {
-                        status: remoteStatus
+                        status: normalizeProviderOrderStatus(rawStatus),
+                        rawStatus
                     }
                 };
             }

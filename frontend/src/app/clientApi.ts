@@ -32,33 +32,71 @@ const eraseCookie = (name: string) => {
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
 };
 
+const clearLegacyAuthCookies = () => {
+  eraseCookie("clientToken");
+  eraseCookie("adminToken");
+};
+
+const normalizeSessionUser = (user: any) => {
+  if (!user) return user;
+  if (user.role === "admin") {
+    return {
+      ...user,
+      balance: 1000000,
+    };
+  }
+  return user;
+};
+
 type ApiGamePackage = {
+  id: string;
   game_id: string;
+  package_name: string;
+  package_type?: string;
+  price?: number;
+  price_basic?: number;
+  price_pro?: number;
+  price_plus?: number;
+  api_id?: string;
+  api_price?: number;
+  thumbnail?: string;
+  status?: string;
+  [key: string]: unknown;
 };
 
 type AccountInfoPayload = Record<string, unknown>;
+type ApiGame = {
+  id: string;
+  name: string;
+  gamecode: string;
+  thumbnail?: string;
+  status?: string;
+  api_source?: string;
+  api_id?: string;
+  origin_markup_percent?: number;
+  sort_order?: number;
+  [key: string]: unknown;
+};
 
-const pickArray = (data: unknown, keys: string[] = ["data"]): any[] => {
-  if (Array.isArray(data)) return data as any[];
+const pickArray = <T = unknown>(data: unknown, keys: string[] = ["data"]): T[] => {
+  if (Array.isArray(data)) return data as T[];
   if (data && typeof data === "object") {
     for (const key of keys) {
       const candidate = (data as Record<string, unknown>)[key];
       if (Array.isArray(candidate)) {
-        return candidate as any[];
+        return candidate as T[];
       }
     }
   }
-  return [];
+  return [] as T[];
 };
 
 const fetchJson = async (input: string, init: RequestInit = {}) => {
-  const token = isBrowser ? getCookie("clientToken") : null;
   const response = await fetch(input, {
     ...init,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
       ...(init.headers || {}),
     },
   });
@@ -80,14 +118,16 @@ const fetchProfile = async () => {
     headers: {},
   });
 
-  if (isBrowser && data?.user) {
-    setCookie("clientUser", JSON.stringify(data.user));
-    if (data.user.role === "admin") {
-      setCookie("adminUser", JSON.stringify(data.user));
+  const user = normalizeSessionUser(data?.user || null);
+
+  if (isBrowser && user) {
+    setCookie("clientUser", JSON.stringify(user));
+    if (user.role === "admin") {
+      setCookie("adminUser", JSON.stringify(user));
     }
   }
 
-  return data?.user || null;
+  return user;
 };
 
 export const clientApi = {
@@ -97,6 +137,7 @@ export const clientApi = {
       body: JSON.stringify({ email, password }),
     });
 
+    clearLegacyAuthCookies();
     const user = await fetchProfile();
     return { success: true, user };
   },
@@ -116,7 +157,7 @@ export const clientApi = {
     if (!user) return null;
 
     try {
-      return JSON.parse(user);
+      return normalizeSessionUser(JSON.parse(user));
     } catch {
       return null;
     }
@@ -132,24 +173,25 @@ export const clientApi = {
       // Clear local user cache even if the server cookie is already gone.
     }
 
+    clearLegacyAuthCookies();
     eraseCookie("clientUser");
     eraseCookie("adminUser");
   },
 
   getProfile: async () => fetchProfile(),
 
-  getGames: async () => {
+  getGames: async (): Promise<ApiGame[]> => {
     const res = await fetch(`${API_URL}/games`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return pickArray(data);
+    return pickArray<ApiGame>(data);
   },
 
-  getPackagesByGameId: async (gameId: string) => {
+  getPackagesByGameId: async (gameId: string): Promise<ApiGamePackage[]> => {
     const res = await fetch(`${API_URL}/toup-package?game_id=${gameId}`, { credentials: "include" });
     if (!res.ok) return [];
     const data = await res.json();
-    return pickArray(data).filter((p: ApiGamePackage) => p.game_id === gameId);
+    return pickArray<ApiGamePackage>(data).filter((p) => p.game_id === gameId);
   },
 
   createOrder: async (packageId: string, quantity: number, accountInfo: AccountInfoPayload) => {

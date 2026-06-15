@@ -45,7 +45,7 @@ export default function HistoryPage() {
   }, []);
 
   const filteredOrders = orders.filter(o => {
-    const searchStr = `${o.id} ${o.game_name} ${o.package_name} ${o.status}`.toLowerCase();
+    const searchStr = `${o.id} ${o.game_name} ${o.package_name} ${o.quantity || 1} ${o.status}`.toLowerCase();
     return searchStr.includes(search.toLowerCase());
   });
 
@@ -132,7 +132,10 @@ export default function HistoryPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="font-bold text-zinc-900">{order.game_name}</div>
-                            <div className="text-zinc-500 text-xs mt-0.5">{order.package_name}</div>
+                            <div className="text-zinc-500 text-xs mt-0.5">
+                              {order.package_name}
+                              {Number(order.quantity || 1) > 1 ? ` x${Number(order.quantity)}` : ''}
+                            </div>
                           </td>
                           <td className="px-6 py-4 max-w-xs">
                             <div className="text-zinc-600 font-mono text-xs truncate" title={accountStr}>
@@ -141,6 +144,11 @@ export default function HistoryPage() {
                           </td>
                           <td className="px-6 py-4 font-mono font-bold text-zinc-850">
                             {Number(order.amount).toLocaleString('vi-VN')}đ
+                            {Number(order.quantity || 1) > 1 ? (
+                              <div className="mt-1 text-[10px] font-semibold text-zinc-500">
+                                Sá»‘ lÆ°á»£ng: x{Number(order.quantity)}
+                              </div>
+                            ) : null}
                           </td>
                           <td className="px-6 py-4 text-zinc-500 text-xs">
                             {new Date(order.created_at).toLocaleString('vi-VN')}
@@ -149,6 +157,7 @@ export default function HistoryPage() {
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                               order.status === 'success' || order.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                               order.status === 'processing' || order.status === 'PROCESSING' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                              order.status === 'partial_completed' || order.status === 'PARTIAL_COMPLETED' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                               order.status === 'cancelled' || order.status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                               'bg-amber-50 text-amber-600 border-amber-100'
                             }`}>

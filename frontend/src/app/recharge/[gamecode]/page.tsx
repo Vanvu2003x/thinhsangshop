@@ -135,6 +135,24 @@ export default function GameRechargePage({ params }: { params: Promise<{ gamecod
 
     setSubmitting(true);
     try {
+      const res = await clientApi.createOrder(selectedPkgId, quantity, accountData);
+
+      if (res.success) {
+        setSuccessMsg(
+          quantity > 1
+            ? `Táº¡o Ä‘Æ¡n hÃ ng x${quantity} thÃ nh cÃ´ng! Há»‡ thá»‘ng Ä‘ang xá»­ lÃ½.`
+            : "Táº¡o Ä‘Æ¡n hÃ ng náº¡p thÃ nh cÃ´ng! Há»‡ thá»‘ng Ä‘ang tá»± Ä‘á»™ng xá»­ lÃ½ Ä‘Æ¡n."
+        );
+        const freshProfile = await clientApi.getProfile();
+        setUserProfile(freshProfile);
+        setTimeout(() => {
+          router.push('/history');
+        }, 1500);
+      } else {
+        setErrorMsg(res.message || "Táº¡o Ä‘Æ¡n tháº¥t báº¡i.");
+      }
+      return;
+
       let success = true;
       let lastMessage = "";
 

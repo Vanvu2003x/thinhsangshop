@@ -1,6 +1,32 @@
 const AuthService = require("./auth.service");
 const asyncHandler = require("../../utils/asyncHandler");
 
+const TOKEN_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+const isSecureRequest = (req) => {
+    const forwardedProtoHeader = req.headers["x-forwarded-proto"];
+    const forwardedProto = Array.isArray(forwardedProtoHeader)
+        ? forwardedProtoHeader[0]
+        : forwardedProtoHeader?.split(",")[0]?.trim();
+
+    return req.secure || forwardedProto === "https";
+};
+
+const getTokenCookieOptions = (req) => ({
+    httpOnly: true,
+    secure: isSecureRequest(req),
+    sameSite: "lax",
+    path: "/",
+    maxAge: TOKEN_COOKIE_MAX_AGE
+});
+
+const getTokenClearCookieOptions = (req) => ({
+    httpOnly: true,
+    secure: isSecureRequest(req),
+    sameSite: "lax",
+    path: "/"
+});
+
 const AuthController = {
     register: asyncHandler(async (req, res) => {
         const result = await AuthService.register(req.body);
@@ -8,12 +34,7 @@ const AuthController = {
         const { email, password } = req.body;
         const loginResult = await AuthService.login(email, password);
 
-        res.cookie('token', loginResult.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        res.cookie('token', loginResult.token, getTokenCookieOptions(req));
 
         return res.status(201).json({
             ...result,
@@ -22,7 +43,7 @@ const AuthController = {
     }),
 
     logout: (req, res) => {
-        res.clearCookie('token');
+        res.clearCookie('token', getTokenClearCookieOptions(req));
         return res.status(200).json({ message: "Đăng xuất thành công" });
     },
 
@@ -30,12 +51,7 @@ const AuthController = {
         const { email, password } = req.body;
         const result = await AuthService.login(email, password);
 
-        res.cookie('token', result.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        res.cookie('token', result.token, getTokenCookieOptions(req));
 
         return res.status(200).json(result);
     }),

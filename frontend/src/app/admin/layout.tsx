@@ -155,10 +155,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
+      {/* Sidebar Overlay for Mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-30 bg-[#0b0f19]/60 backdrop-blur-sm xl:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Content Area */}
       <div className="flex-1 xl:pl-64 min-h-screen flex flex-col">
         {/* Header */}
-        <header className="h-16 px-6 bg-[#1e293b]/30 backdrop-blur-md border-b border-white/5 flex items-center justify-between sticky top-0 z-30">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/5 bg-[#1e293b]/30 px-4 backdrop-blur-md sm:px-6">
           <div className="flex items-center gap-4">
             <button className="xl:hidden text-zinc-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
               <Menu className="w-6 h-6" />
@@ -173,7 +181,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Child Pages Container */}
-        <main className="flex-1 p-6 relative overflow-y-auto">
+        <main className="relative flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </main>
       </div>
