@@ -251,8 +251,7 @@ export default function PackageManagement() {
     const matchesSearch =
       keyword.length === 0 ||
       (pkg.package_name || "").toLowerCase().includes(keyword) ||
-      (pkg.id || "").toLowerCase().includes(keyword) ||
-      (pkg.api_id || "").toLowerCase().includes(keyword);
+      (pkg.id || "").toLowerCase().includes(keyword);
 
     return matchesGame && matchesSearch;
   });
@@ -410,7 +409,7 @@ export default function PackageManagement() {
 
       {editingPkg ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#1e293b] shadow-2xl animate-scaleUp">
             <div className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/40 px-6 py-4">
               <h3 className="text-base font-bold text-white">{editingPkg.id ? "Chỉnh sửa gói nạp" : "Thêm gói nạp mới"}</h3>
               <button onClick={handleCloseModal} disabled={saving} className="text-zinc-400 hover:text-white disabled:opacity-50">
@@ -418,7 +417,7 @@ export default function PackageManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4 p-6">
+            <form onSubmit={handleSave} className="space-y-4 overflow-y-auto p-6">
               {modalNotice ? (
                 <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${noticeStyles[modalNotice.tone]}`}>
                   {modalNotice.tone === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
@@ -436,41 +435,6 @@ export default function PackageManagement() {
                   placeholder="Ví dụ: 86 Diamonds"
                   className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Chọn game</label>
-                  <select
-                    value={gameId}
-                    onChange={(event) => {
-                      const nextGameId = event.target.value;
-                      setGameId(nextGameId);
-                      if (!editingPkg.id) {
-                        applyGameDefaults(nextGameId);
-                      }
-                    }}
-                    className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
-                  >
-                    {games.map((game) => (
-                      <option key={game.id} value={game.id}>
-                        {game.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Loại gói</label>
-                  <input
-                    type="text"
-                    value={packageType}
-                    onChange={(event) => setPackageType(event.target.value)}
-                    required
-                    placeholder="Ví dụ: Diamonds, Pass"
-                    className="w-full rounded-xl border border-white/10 bg-[#0f172a]/50 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500"
-                  />
-                </div>
               </div>
 
               <div>
